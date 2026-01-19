@@ -69,6 +69,8 @@ class ReleaseParserTest {
         void shouldParseTSSource() {
             ReleaseInfo info = parser.parse("Movie.Title.2023.TS.x264-GROUP");
             assertThat(info.getSource()).isEqualTo(Source.TELESYNC);
+            info = parser.parse(" 69.Days.Later.The.Fuck.Palace.2026.1080p.HDTS.x265.Dual.YG ");
+            assertThat(info.getSource()).isEqualTo(Source.TELESYNC);
         }
 
         @Test
