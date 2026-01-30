@@ -353,7 +353,7 @@ public class NzbHydra {
         return new CaffeineCacheManager("infos", "titles", "updates", "dev");
     }
 
-    static void setDataFolder(String dataFolder) {
+    public static void setDataFolder(String dataFolder) {
         NzbHydra.dataFolder = dataFolder;
     }
 

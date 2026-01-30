@@ -14,6 +14,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.annotation.Secured;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
@@ -23,6 +24,7 @@ import java.io.IOException;
 import java.security.Principal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 public class NewsWeb {
@@ -33,6 +35,8 @@ public class NewsWeb {
     private NewsProvider newsProvider;
     @Autowired
     private UpdateManager updateManager;
+    @Autowired
+    private UserNewsProvider userNewsProvider;
 
     @RequestMapping(value = "/internalapi/news", method = RequestMethod.GET)
     @Secured({"ROLE_USER"})
@@ -73,5 +77,25 @@ public class NewsWeb {
         return transformedEntries;
     }
 
+    @RequestMapping(value = "/internalapi/usernews", method = RequestMethod.GET)
+    @Secured({"ROLE_USER"})
+    public List<UserNewsEntryForWeb> getUnreadUserNews(Principal principal) {
+        String username = principal != null ? principal.getName() : "anonymous";
+        return userNewsProvider.getUnreadUserNewsForUser(username).stream()
+                .map(entry -> new UserNewsEntryForWeb(
+                        entry.getId(),
+                        entry.getTitle(),
+                        Markdown.renderMarkdownAsHtml(entry.getBody())
+                ))
+                .collect(Collectors.toList());
+    }
+
+    @RequestMapping(value = "/internalapi/usernews/{id}/dismiss", method = RequestMethod.PUT)
+    @Secured({"ROLE_USER"})
+    public GenericResponse dismissUserNews(@PathVariable String id, Principal principal) {
+        String username = principal != null ? principal.getName() : "anonymous";
+        userNewsProvider.markNewsAsShownForUser(username, id);
+        return GenericResponse.ok();
+    }
 
 }

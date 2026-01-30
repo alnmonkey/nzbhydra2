@@ -2048,6 +2048,7 @@ function formatClassname() {
 
 NewsModalInstanceCtrl.$inject = ["$scope", "$uibModalInstance", "news"];
 WelcomeModalInstanceCtrl.$inject = ["$scope", "$uibModalInstance", "$state", "MigrationService"];
+UserNewsModalInstanceCtrl.$inject = ["$scope", "$uibModalInstance", "$http", "currentNews"];
 angular
     .module('nzbhydraApp')
     .directive('hydraChecksFooter', hydraChecksFooter);
@@ -2288,6 +2289,7 @@ function hydraChecksFooter() {
                             welcomeIsBeingShown = false;
                         });
                     } else {
+                        _.defer(checkAndShowUserNews);
                         if (HydraAuthService.getUserInfos().maySeeAdmin) {
                             _.defer(checkAndShowNews);
                             _.defer(checkExpiredIndexers);
@@ -2296,6 +2298,39 @@ function hydraChecksFooter() {
                 }, function () {
                     console.log("Error while checking for welcome")
                 });
+            });
+        }
+
+        function checkAndShowUserNews() {
+            RequestsErrorHandler.specificallyHandled(function () {
+                $http.get("internalapi/usernews").then(function (response) {
+                    var userNews = response.data;
+                    if (userNews && userNews.length > 0) {
+                        showUserNewsSequentially(userNews, 0);
+                    }
+                });
+            });
+        }
+
+        function showUserNewsSequentially(userNews, index) {
+            if (index >= userNews.length) {
+                return;
+            }
+            var currentNews = userNews[index];
+            var modalInstance = $uibModal.open({
+                templateUrl: 'static/html/user-news-modal.html',
+                controller: UserNewsModalInstanceCtrl,
+                size: "lg",
+                resolve: {
+                    currentNews: function () {
+                        return currentNews;
+                    }
+                }
+            });
+            modalInstance.result.then(function () {
+                showUserNewsSequentially(userNews, index + 1);
+            }, function () {
+                showUserNewsSequentially(userNews, index + 1);
             });
         }
 
@@ -2397,6 +2432,22 @@ function WelcomeModalInstanceCtrl($scope, $uibModalInstance, $state, MigrationSe
         $uibModalInstance.dismiss();
         $state.go("root.config.main");
     }
+}
+
+angular
+    .module('nzbhydraApp')
+    .controller('UserNewsModalInstanceCtrl', UserNewsModalInstanceCtrl);
+
+function UserNewsModalInstanceCtrl($scope, $uibModalInstance, $http, currentNews) {
+    $scope.currentNews = currentNews;
+
+    $scope.dismiss = function () {
+        $http.put("internalapi/usernews/" + currentNews.id + "/dismiss").then(function () {
+            $uibModalInstance.close();
+        }, function () {
+            $uibModalInstance.close();
+        });
+    };
 }
 
 
