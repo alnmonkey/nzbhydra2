@@ -13,7 +13,10 @@
       "Bash(mvn test:*)",
       "Bash(mvn help:describe:*)",
       "mcp__github__get_commit",
-      "Bash(findstr:*)"
+      "Bash(findstr:*)",
+      "Bash(dir \"c:\\\\temp\\\\hydrastats\")",
+      "Bash(gh issue view:*)",
+      "Bash(gh api:*)"
     ],
     "deny": [],
     "ask": []
