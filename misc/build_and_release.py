@@ -875,6 +875,7 @@ def git_commit(ctx: BuildContext) -> None:
         ctx,
         ["git", "commit", "-am", f"Update to {ctx.version}"],
         f"Committing release {ctx.version}",
+        is_remote=True,  # Skip in local dry run mode
     )
 
 
@@ -971,6 +972,7 @@ def git_commit_snapshot(ctx: BuildContext) -> None:
         ctx,
         ["git", "commit", "-am", f"Update to {ctx.next_version}-SNAPSHOT"],
         f"Committing snapshot {ctx.next_version}-SNAPSHOT",
+        is_remote=True,  # Skip in local dry run mode
     )
 
 
