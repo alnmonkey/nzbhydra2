@@ -2,7 +2,7 @@
 -   version: "v8.4.0"
     date: "2026-01-31"
     changes:
-      -   type: "fix"
+      -   type: "feature"
           text: "Option to overwrite result category N/A with the category of the search"
       -   type: "fix"
           text: "Truncate notification body to 255 characters before saving to database to prevent DataIntegrityViolationException causing massive log files. See #1040"
