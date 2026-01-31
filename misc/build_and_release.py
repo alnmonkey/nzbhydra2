@@ -765,11 +765,11 @@ def _build_linux_arm64(ctx: BuildContext, log_file: Path) -> str | None:
             timeout_seconds=1200,  # 20 minutes
         )
 
-        # Verify version (check the copied file, not remote)
+        # Verify version on remote machine
         if ctx.dry_run.should_execute_local():
             result = run_wsl_command(
                 build_ctx,
-                "releases/linux-arm64-release/include/executables/core -version",
+                "./misc/buildLinuxCore/arm64/getVersion.sh",
                 "Verifying Linux arm64 version",
             )
             if result:
