@@ -18,6 +18,11 @@ class SearchState {
     private int indexersSelected = 0;
     private int indexersFinished = 0;
     private List<SortableMessage> messages = new ArrayList<>();
+    /**
+     * Transient flag used to indicate if the state was modified and should be sent.
+     * Not serialized to JSON.
+     */
+    private transient boolean modified = true;
 
     public SearchState(long searchRequestId) {
         this.searchRequestId = searchRequestId;

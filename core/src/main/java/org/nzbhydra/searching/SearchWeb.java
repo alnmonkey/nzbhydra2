@@ -57,7 +57,7 @@ public class SearchWeb {
     private final Lock lock = new ReentrantLock();
 
     private final Map<Long, SearchState> searchStates = ExpiringMap.builder()
-            .maxSize(10)
+            .maxSize(50)
             .expiration(5, TimeUnit.MINUTES) //This should be more than enough... Nobody will wait that long
             .expirationPolicy(ExpirationPolicy.ACCESSED)
             .build();
@@ -73,11 +73,15 @@ public class SearchWeb {
 
         SearchResponse searchResponse = searchResultProcessor.createSearchResponse(searchResult);
 
+        SearchState searchState;
         lock.lock();
-        SearchState searchState = searchStates.get(searchRequest.getSearchRequestId());
-        searchState.setSearchFinished(true);
+        try {
+            searchState = searchStates.get(searchRequest.getSearchRequestId());
+            searchState.setSearchFinished(true);
+        } finally {
+            lock.unlock();
+        }
         sendSearchState(searchState);
-        lock.unlock();
 
         logger.info("Web search took {}ms", stopwatch.elapsed(TimeUnit.MILLISECONDS));
         return searchResponse;
@@ -163,49 +167,57 @@ public class SearchWeb {
 
     @EventListener
     public void handleSearchMessageEvent(SearchMessageEvent event) {
-        if (searchStates.containsKey(event.getSearchRequest().getSearchRequestId())) {
-            lock.lock();
-            SearchState searchState = searchStates.get(event.getSearchRequest().getSearchRequestId());
+        updateAndSendSearchState(event.getSearchRequest().getSearchRequestId(), searchState -> {
             if (!searchState.getMessages().contains(event.getMessage())) {
                 searchState.getMessages().add(event.getMessage());
                 searchState.getMessages().sort(Comparator.comparing(x -> x.getMessageSortValue().toLowerCase(Locale.ROOT)));
-                sendSearchState(searchState);
+                searchState.setModified(true);
             }
-            lock.unlock();
-        }
+        });
     }
 
     @EventListener
     public void handleIndexerSelectionEvent(IndexerSelectionEvent event) {
-        if (searchStates.containsKey(event.getSearchRequest().getSearchRequestId())) {
-            lock.lock();
-            SearchState searchState = searchStates.get(event.getSearchRequest().getSearchRequestId());
+        updateAndSendSearchState(event.getSearchRequest().getSearchRequestId(), searchState -> {
             searchState.setIndexerSelectionFinished(true);
             searchState.setIndexersSelected(event.getIndexersSelected());
-            lock.unlock();
-            sendSearchState(searchState);
-        }
+        });
     }
 
     @EventListener
     public void handleFallbackSearchInitatedEvent(FallbackSearchInitiatedEvent event) {
         //An indexer will do a fallback search, meaning we'll have to wait for another indexer search. On the GUI side that's the same as if one more indexer had been selected
-        if (searchStates.containsKey(event.getSearchRequest().getSearchRequestId())) {
-            lock.lock();
-            SearchState searchState = searchStates.get(event.getSearchRequest().getSearchRequestId());
-            searchState.setIndexersSelected(searchState.getIndexersSelected() + 1);
-            lock.unlock();
-            sendSearchState(searchState);
-        }
+        updateAndSendSearchState(event.getSearchRequest().getSearchRequestId(), searchState ->
+                searchState.setIndexersSelected(searchState.getIndexersSelected() + 1));
     }
 
     @EventListener
     public void handleIndexerSearchFinishedEvent(IndexerSearchFinishedEvent event) {
-        if (searchStates.containsKey(event.getSearchRequest().getSearchRequestId())) {
-            lock.lock();
-            SearchState searchState = searchStates.get(event.getSearchRequest().getSearchRequestId());
-            searchState.setIndexersFinished(searchState.getIndexersFinished() + 1);
+        updateAndSendSearchState(event.getSearchRequest().getSearchRequestId(), searchState ->
+                searchState.setIndexersFinished(searchState.getIndexersFinished() + 1));
+    }
+
+    /**
+     * Updates the search state under lock and sends it after releasing the lock.
+     * The updater can set searchState.setModified(false) to skip sending.
+     */
+    private void updateAndSendSearchState(Long searchRequestId, java.util.function.Consumer<SearchState> updater) {
+        if (!searchStates.containsKey(searchRequestId)) {
+            return;
+        }
+        SearchState searchState;
+        lock.lock();
+        try {
+            searchState = searchStates.get(searchRequestId);
+            if (searchState == null) {
+                return;
+            }
+            searchState.setModified(true);
+            updater.accept(searchState);
+        } finally {
             lock.unlock();
+        }
+        if (searchState.isModified()) {
             sendSearchState(searchState);
         }
     }

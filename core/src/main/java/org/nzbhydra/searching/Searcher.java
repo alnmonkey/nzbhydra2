@@ -29,7 +29,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -71,6 +71,8 @@ public class Searcher {
     private ApplicationEventPublisher eventPublisher;
     @Autowired
     private ConfigProvider configProvider;
+    @Autowired
+    private TransactionTemplate transactionTemplate;
     private final Set<ExecutorService> executors = Collections.synchronizedSet(new HashSet<>());
     private final Map<Long, List<Future<IndexerSearchResult>>> searchCallables = ExpiringMap.builder()
             .maxSize(10)
@@ -89,7 +91,6 @@ public class Searcher {
             .expirationListener((k, v) -> logger.debug("Removing expired search cache entry {}", ((SearchCacheEntry) v).getSearchRequest()))
             .build();
 
-    @Transactional
     public SearchResult search(SearchRequest searchRequest) {
         Stopwatch stopwatch = Stopwatch.createStarted();
         eventPublisher.publishEvent(new SearchEvent(searchRequest));
@@ -260,7 +261,7 @@ public class Searcher {
                 .collect(Collectors.toList());
     }
 
-    private void createOrUpdateIndexerSearchEnties(SearchCacheEntry searchCacheEntry) {
+    protected void createOrUpdateIndexerSearchEnties(SearchCacheEntry searchCacheEntry) {
         Stopwatch stopwatch = Stopwatch.createStarted();
         int countEntities = 0;
 
@@ -275,14 +276,18 @@ public class Searcher {
                     entity.setSuccessful(indexerSearchResult.isWasSuccessful());
                     indexerSearchCacheEntry.setIndexerSearchEntity(entity);
                 }
-                if (configProvider.getBaseConfig().getMain().isKeepHistory()) {
-                    entity = indexerSearchRepository.save(entity);
-                    for (SearchResultEntity x : indexerSearchResult.getSearchResultEntities()) {
-                        x.setIndexerSearchEntityId(entity.getId());
+                IndexerSearchEntity finalEntity = entity;
+                transactionTemplate.executeWithoutResult(status -> {
+                    IndexerSearchEntity savedEntity = finalEntity;
+                    if (configProvider.getBaseConfig().getMain().isKeepHistory()) {
+                        savedEntity = indexerSearchRepository.save(finalEntity);
+                        for (SearchResultEntity x : indexerSearchResult.getSearchResultEntities()) {
+                            x.setIndexerSearchEntityId(savedEntity.getId());
+                        }
                     }
-                }
-                searchResultRepository.saveAll(indexerSearchResult.getSearchResultEntities());
-                searchCacheEntry.getIndexerCacheEntries().get(indexerSearchResult.getIndexer().getName()).setIndexerSearchEntity(entity);
+                    searchResultRepository.saveAll(indexerSearchResult.getSearchResultEntities());
+                    searchCacheEntry.getIndexerCacheEntries().get(indexerSearchResult.getIndexer().getName()).setIndexerSearchEntity(savedEntity);
+                });
                 countEntities++;
             }
         }
@@ -309,7 +314,7 @@ public class Searcher {
             searchRequest.extractQueryAndForbiddenWords();
 
             if (configProvider.getBaseConfig().getMain().isKeepHistory()) {
-                searchRepository.save(searchEntity);
+                transactionTemplate.executeWithoutResult(status -> searchRepository.save(searchEntity));
             }
 
             IndexerForSearchSelection pickingResult = indexerSelector.pickIndexers(searchRequest);
