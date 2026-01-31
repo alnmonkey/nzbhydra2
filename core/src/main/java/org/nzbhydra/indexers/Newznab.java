@@ -144,8 +144,13 @@ public class Newznab extends Indexer<Xml> {
         query = cleanupQuery(query);
         addFurtherParametersToUri(searchRequest, componentsBuilder, query);
 
-        //No reason not to get as many as we can
-        componentsBuilder.queryParam("limit", 1000);
+        //No reason not to get as many as we can. Use custom limit if configured.
+        Integer effectiveLimit = config.getCustomParameters().stream()
+                .filter(x -> x.toLowerCase().startsWith("limit="))
+                .map(x -> Integer.parseInt(x.split("=")[1]))
+                .findFirst()
+                .orElse(1000);
+        componentsBuilder.queryParam("limit", effectiveLimit);
         if (offset != null) {
             componentsBuilder.queryParam("offset", offset);
         }
@@ -205,10 +210,12 @@ public class Newznab extends Indexer<Xml> {
 
         calculateAndAddCategories(searchRequest, componentsBuilder);
 
-        config.getCustomParameters().forEach(x -> {
-            final String[] split = x.split("=");
-            componentsBuilder.queryParam(split[0], split[1]);
-        });
+        config.getCustomParameters().stream()
+                .filter(x -> !x.toLowerCase().startsWith("limit="))
+                .forEach(x -> {
+                    final String[] split = x.split("=");
+                    componentsBuilder.queryParam(split[0], split[1]);
+                });
 
     }
 

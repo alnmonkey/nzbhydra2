@@ -823,6 +823,38 @@ public class NewznabTest {
     }
 
     @Test
+    void shouldUseCustomLimitFromCustomParameters() throws Exception {
+        testee.config.setCustomParameters(Arrays.asList("limit=100"));
+        SearchRequest request = new SearchRequest(SearchSource.INTERNAL, SearchType.SEARCH, 0, 100);
+        String uri = buildCleanedSearchUrl(request, 0, 100).toUriString();
+        assertThat(uri).contains("limit=100");
+        assertThat(uri).doesNotContain("limit=1000");
+    }
+
+    @Test
+    void shouldUseDefaultLimitWhenNoCustomLimitConfigured() throws Exception {
+        testee.config.setCustomParameters(Arrays.asList("otherparam=value"));
+        SearchRequest request = new SearchRequest(SearchSource.INTERNAL, SearchType.SEARCH, 0, 100);
+        String uri = buildCleanedSearchUrl(request, 0, 100).toUriString();
+        assertThat(uri).contains("limit=100");
+        assertThat(uri).contains("otherparam=value");
+    }
+
+    @Test
+    void shouldNotDuplicateLimitInCustomParameters() throws Exception {
+        testee.config.setCustomParameters(Arrays.asList("limit=50", "otherparam=value"));
+        SearchRequest request = new SearchRequest(SearchSource.INTERNAL, SearchType.SEARCH, 0, 100);
+        String uri = buildCleanedSearchUrl(request, 0, 100).toUriString();
+        // Should only have one limit parameter with value 50
+        assertThat(uri).contains("limit=50");
+        assertThat(uri).doesNotContain("limit=1000");
+        assertThat(uri).contains("otherparam=value");
+        // Verify limit appears only once
+        int limitCount = uri.split("limit=").length - 1;
+        assertThat(limitCount).isEqualTo(1);
+    }
+
+    @Test
     void shouldHandleEmptyNewznabResponseElement() throws Exception {
         // Simulates empty response element from Bitmagnet:
         // <response xmlns="http://www.newznab.com/DTD/2010/feeds/attributes/"></response>
@@ -849,6 +881,54 @@ public class NewznabTest {
         assertThat(indexerSearchResult.getOffset()).isEqualTo(0);
         assertThat(indexerSearchResult.isTotalResultsKnown()).isEqualTo(true);
         assertThat(indexerSearchResult.isHasMoreResults()).isEqualTo(false);
+    }
+
+    @Test
+    void shouldParseEffectiveLimitFromCustomParameters() {
+        // With limit parameter
+        testee.config.setCustomParameters(Arrays.asList("limit=250"));
+        Integer effectiveLimit = testee.config.getCustomParameters().stream()
+                .filter(x -> x.toLowerCase().startsWith("limit="))
+                .map(x -> Integer.parseInt(x.split("=")[1]))
+                .findFirst()
+                .orElse(1000);
+        assertThat(effectiveLimit).isEqualTo(250);
+
+        // Without limit parameter - should default to 1000
+        testee.config.setCustomParameters(Arrays.asList("otherparam=value"));
+        effectiveLimit = testee.config.getCustomParameters().stream()
+                .filter(x -> x.toLowerCase().startsWith("limit="))
+                .map(x -> Integer.parseInt(x.split("=")[1]))
+                .findFirst()
+                .orElse(1000);
+        assertThat(effectiveLimit).isEqualTo(1000);
+
+        // With limit parameter (case insensitive)
+        testee.config.setCustomParameters(Arrays.asList("LIMIT=500"));
+        effectiveLimit = testee.config.getCustomParameters().stream()
+                .filter(x -> x.toLowerCase().startsWith("limit="))
+                .map(x -> Integer.parseInt(x.split("=")[1]))
+                .findFirst()
+                .orElse(1000);
+        assertThat(effectiveLimit).isEqualTo(500);
+
+        // With empty custom parameters - should default to 1000
+        testee.config.setCustomParameters(Collections.emptyList());
+        effectiveLimit = testee.config.getCustomParameters().stream()
+                .filter(x -> x.toLowerCase().startsWith("limit="))
+                .map(x -> Integer.parseInt(x.split("=")[1]))
+                .findFirst()
+                .orElse(1000);
+        assertThat(effectiveLimit).isEqualTo(1000);
+
+        // With multiple parameters including limit
+        testee.config.setCustomParameters(Arrays.asList("param1=value1", "limit=75", "param2=value2"));
+        effectiveLimit = testee.config.getCustomParameters().stream()
+                .filter(x -> x.toLowerCase().startsWith("limit="))
+                .map(x -> Integer.parseInt(x.split("=")[1]))
+                .findFirst()
+                .orElse(1000);
+        assertThat(effectiveLimit).isEqualTo(75);
     }
 
 }

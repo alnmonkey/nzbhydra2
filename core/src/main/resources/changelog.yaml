@@ -4,6 +4,8 @@
     changes:
       -   type: "fix"
           text: "Truncate notification body to 255 characters before saving to database to prevent DataIntegrityViolationException causing massive log files. See #1040"
+      -   type: "fix"
+          text: "If a custom page size parameter (limit) is configured for a newznab indexer use that one instead of the hardcoded 1000."
 -   version: "v8.3.0"
     date: "2026-01-16"
     changes:
