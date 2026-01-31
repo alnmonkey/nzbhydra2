@@ -2,6 +2,7 @@ package org.nzbhydra.web;
 
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import jakarta.xml.bind.Marshaller;
+import lombok.SneakyThrows;
 import org.nzbhydra.NzbHydra;
 import org.nzbhydra.api.stats.HistoryRequestConverter;
 import org.nzbhydra.api.stats.StatsRequestConverter;
@@ -56,6 +57,7 @@ public class WebConfiguration extends WebMvcConfigurationSupport {
 
     private static final Logger logger = LoggerFactory.getLogger(WebConfiguration.class);
 
+    @SneakyThrows
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         String[] locations = new String[]{"classpath:/static/"};
@@ -77,6 +79,15 @@ public class WebConfiguration extends WebMvcConfigurationSupport {
                 .addResourceLocations(locations)
                 .setCacheControl(CacheControl.noCache())
                 .resourceChain(false);
+        File additionalStatic = new File(NzbHydra.getDataFolder(), "additionalStatic");
+        if (additionalStatic.exists()) {
+            logger.warn("Files in the data/additionalStatic folder will be exposed");
+        }
+        registry.addResourceHandler("/additionalStatic/**")
+                .addResourceLocations(additionalStatic.toURI().toURL().toString())
+                .setCacheControl(CacheControl.noCache())
+                .resourceChain(false);
+
         registry.addResourceHandler("/favicon.*")
                 .addResourceLocations("classpath:/static/img/")
                 .setCacheControl(CacheControl.noCache())
