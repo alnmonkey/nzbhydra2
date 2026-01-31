@@ -36,6 +36,7 @@ import org.nzbhydra.searching.dtoseventsenums.SearchResultItem;
 import org.nzbhydra.searching.searchrequests.InternalData;
 import org.nzbhydra.searching.searchrequests.SearchRequest;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -95,6 +96,8 @@ public class SearcherUnitTest {
     private ApplicationEventPublisher applicationEventPublisherMock;
     @Mock
     private ConfigProvider configProviderMock;
+    @Mock
+    private TransactionTemplate transactionTemplateMock;
     private Random random = new Random();
 
 
@@ -133,6 +136,11 @@ public class SearcherUnitTest {
         BaseConfig value = new BaseConfig();
         value.getSearching().setLoadAllCachedOnInternal(false);
         when(configProviderMock.getBaseConfig()).thenReturn(value);
+
+        doAnswer(invocation -> {
+            invocation.getArgument(0, java.util.function.Consumer.class).accept(null);
+            return null;
+        }).when(transactionTemplateMock).executeWithoutResult(any());
     }
 
 
