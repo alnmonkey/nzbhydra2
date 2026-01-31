@@ -4,6 +4,7 @@
     changes:
       -   type: "fix"
           text: "If a custom page size parameter (limit) is configured for a newznab indexer use that one instead of the hardcoded 1000."
+    final: true
 -   version: "v8.4.0"
     date: "2026-01-31"
     changes:
@@ -13,11 +14,13 @@
           text: "Truncate notification body to 255 characters before saving to database to prevent DataIntegrityViolationException causing massive log files. See #1040"
       -   type: "fix"
           text: "If a custom page size parameter (limit) is configured for a newznab indexer use that one instead of the hardcoded 1000."
+    final: true
 -   version: "v8.3.0"
     date: "2026-01-16"
     changes:
       -   type: "feature"
           text: "Added an option to show a quality indicator for movie releases. This helps identify release quality at a glance without needing to understand terms like HC, TS or DV. You can enable it in the searching section. The parser is adapted from Radarr. To comply with their GPL license, NZBHydra is now GPL as well. This doesn't change anything for you as a user."
+    final: true
 -   version: "v8.2.3"
     date: "2026-01-15"
     changes:
@@ -25,16 +28,19 @@
           text: "Make filter icons and sort indicators visible in bright theme :-)"
       -   type: "fix"
           text: "Send content to sabnzbd in correct format. See #1037"
+    final: true
 -   version: "v8.2.2"
     date: "2026-01-11"
     changes:
       -   type: "fix"
           text: "Fix attribute whitelist not matching multi-value attributes (e.g., subs with values like \"English - French - German\"). See #983"
+    final: true
 -   version: "v8.2.1"
     date: "2026-01-06"
     changes:
       -   type: "fix"
           text: "Fix reading prowlarr config. I've extended the tests to ensure this kind of bug doesn't happen again (the one which only appears with the released binaries, not when developing). See #1035"
+    final: true
 -   version: "v8.2.0"
     date: "2026-01-05"
     changes:
