@@ -1,6 +1,6 @@
 package org.nzbhydra.config.validation;
 
-import org.nzbhydra.config.sensitive.SensitiveDataObfuscator;
+import org.nzbhydra.config.sensitive.HiddenInUI;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -98,11 +98,11 @@ public class SensitiveDataConfigValidator {
                         continue;
                     }
 
-                    // For encrypted sensitive string fields, replace with placeholder for display
-                    if (field.getType() == String.class && forDisplay) {
+                    // For fields marked as hidden in UI, replace with placeholder for display
+                    if (field.getType() == String.class && forDisplay && field.isAnnotationPresent(HiddenInUI.class)) {
                         String value = (String) fieldValue;
-                        if (SensitiveDataObfuscator.isEncrypted(value)) {
-                            // Don't expose the encrypted value to frontend, just show placeholder
+                        // Don't expose hidden values to frontend, just show placeholder
+                        if (value != null && !value.isEmpty()) {
                             field.set(obj, UNCHANGED_MARKER);
                             continue;
                         }

@@ -3956,7 +3956,7 @@ function getIndexerBoxFields(indexerModel, parentModel, isInitial, CategoriesSer
         fieldset.push(
             {
                 key: 'apiKey',
-                type: 'horizontalInput',
+                type: 'passwordSwitch',
                 templateOptions: {
                     type: 'text',
                     label: 'API Key'
@@ -3999,7 +3999,7 @@ function getIndexerBoxFields(indexerModel, parentModel, isInitial, CategoriesSer
         fieldset.push(
             {
                 key: 'username',
-                type: 'horizontalInput',
+                type: 'passwordSwitch',
                 templateOptions: {
                     type: 'text',
                     required: false,
@@ -4021,7 +4021,7 @@ function getIndexerBoxFields(indexerModel, parentModel, isInitial, CategoriesSer
         fieldset.push(
             {
                 key: 'username',
-                type: 'horizontalInput',
+                type: 'passwordSwitch',
                 templateOptions: {
                     type: 'text',
                     required: true,
@@ -6061,7 +6061,7 @@ angular
                     if (model.downloaderType === "SABNZBD" || model.downloaderType === "TORBOX") {
                         fieldset.push({
                             key: 'apiKey',
-                            type: 'horizontalInput',
+                            type: 'passwordSwitch',
                             showFor: ["SABNZBD", "TORBOX"],
                             templateOptions: {
                                 type: 'text',
@@ -6078,7 +6078,7 @@ angular
                     } else if (model.downloaderType === "NZBGET") {
                         fieldset.push({
                             key: 'username',
-                            type: 'horizontalInput',
+                            type: 'passwordSwitch',
                             templateOptions: {
                                 type: 'text',
                                 label: 'Username'
@@ -6413,7 +6413,7 @@ angular
             template: [
                 '<div class="input-group">',
                 '<input ng-attr-type="{{ hidePassword ? \'password\' : \'text\' }}" class="form-control" ng-model="internalValue"',
-                'ng-attr-placeholder="{{ isUnchangedPassword ? \'Password unchanged\' : \'\' }}"',
+                'ng-attr-placeholder="{{ isUnchangedPassword ? \'Value unchanged\' : \'\' }}"',
                 'ng-change="onPasswordChange()" ng-focus="onPasswordFocus()" ng-blur="onPasswordBlur()"',
                 'ng-required="false"/>',  // Disable HTML5 required validation
                 '<span class="input-group-btn input-group-btn2">',
@@ -7486,7 +7486,7 @@ function ConfigFields($injector) {
                         },
                         {
                             key: 'proxyUsername',
-                            type: 'horizontalInput',
+                            type: 'passwordSwitch',
                             hideExpression: 'model.proxyType==="NONE"',
                             templateOptions: {
                                 type: 'text',

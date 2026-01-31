@@ -168,7 +168,7 @@ angular
                     if (model.downloaderType === "SABNZBD" || model.downloaderType === "TORBOX") {
                         fieldset.push({
                             key: 'apiKey',
-                            type: 'horizontalInput',
+                            type: 'passwordSwitch',
                             showFor: ["SABNZBD", "TORBOX"],
                             templateOptions: {
                                 type: 'text',
@@ -185,7 +185,7 @@ angular
                     } else if (model.downloaderType === "NZBGET") {
                         fieldset.push({
                             key: 'username',
-                            type: 'horizontalInput',
+                            type: 'passwordSwitch',
                             templateOptions: {
                                 type: 'text',
                                 label: 'Username'

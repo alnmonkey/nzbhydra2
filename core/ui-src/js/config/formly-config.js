@@ -93,7 +93,7 @@ angular
             template: [
                 '<div class="input-group">',
                 '<input ng-attr-type="{{ hidePassword ? \'password\' : \'text\' }}" class="form-control" ng-model="internalValue"',
-                'ng-attr-placeholder="{{ isUnchangedPassword ? \'Password unchanged\' : \'\' }}"',
+                'ng-attr-placeholder="{{ isUnchangedPassword ? \'Value unchanged\' : \'\' }}"',
                 'ng-change="onPasswordChange()" ng-focus="onPasswordFocus()" ng-blur="onPasswordBlur()"',
                 'ng-required="false"/>',  // Disable HTML5 required validation
                 '<span class="input-group-btn input-group-btn2">',

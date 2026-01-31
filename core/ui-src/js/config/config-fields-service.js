@@ -178,7 +178,7 @@ function ConfigFields($injector) {
                         },
                         {
                             key: 'proxyUsername',
-                            type: 'horizontalInput',
+                            type: 'passwordSwitch',
                             hideExpression: 'model.proxyType==="NONE"',
                             templateOptions: {
                                 type: 'text',

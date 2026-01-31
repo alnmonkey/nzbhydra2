@@ -8,6 +8,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Strings;
 import lombok.Data;
 import org.javers.core.metamodel.annotation.DiffIgnore;
+import org.nzbhydra.config.sensitive.HiddenInUI;
 import org.nzbhydra.config.sensitive.SensitiveData;
 import org.nzbhydra.springnative.ReflectionMarker;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -43,8 +44,10 @@ public class MainConfig {
     private boolean proxyIgnoreLocal = true;
     private List<String> proxyIgnoreDomains = new ArrayList<>();
     @SensitiveData
+    @HiddenInUI
     private String proxyUsername;
     @SensitiveData
+    @HiddenInUI
     private String proxyPassword;
 
     private boolean proxyImages;

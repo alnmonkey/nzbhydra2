@@ -12,6 +12,7 @@ import com.google.common.base.Strings;
 import lombok.Data;
 import org.nzbhydra.config.SearchSourceRestriction;
 import org.nzbhydra.config.mediainfo.MediaIdType;
+import org.nzbhydra.config.sensitive.HiddenInUI;
 import org.nzbhydra.config.sensitive.SensitiveData;
 import org.nzbhydra.mapping.newznab.ActionAttribute;
 import org.nzbhydra.mapping.newznab.json.JsonPubdateDeserializer;
@@ -54,6 +55,7 @@ public class IndexerConfig {
 
     private boolean allCapsChecked;
     @SensitiveData
+    @HiddenInUI
     private String apiKey;
     private String apiPath;
     @JsonFormat(shape = Shape.STRING)
@@ -84,6 +86,7 @@ public class IndexerConfig {
     private Integer minSeeders;
     private String name;
     @SensitiveData
+    @HiddenInUI
     private String password = null;
     private List<String> customParameters = new ArrayList<>();
     private boolean preselect = true;
@@ -96,6 +99,7 @@ public class IndexerConfig {
     private List<ActionAttribute> supportedSearchTypes = new ArrayList<>();
     private Integer timeout = null;
     @SensitiveData
+    @HiddenInUI
     private String username = null;
     private String userAgent = null;
     private String vipExpirationDate;

@@ -7,6 +7,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.nzbhydra.config.sensitive.HiddenInUI;
 import org.nzbhydra.config.sensitive.SensitiveData;
 import org.nzbhydra.downloading.DownloaderType;
 import org.nzbhydra.springnative.ReflectionMarker;
@@ -23,6 +24,7 @@ import java.util.Optional;
 public class DownloaderConfig {
 
     @SensitiveData
+    @HiddenInUI
     private String apiKey;
     private String defaultCategory;
     private DownloadType downloadType;
@@ -34,8 +36,10 @@ public class DownloaderConfig {
     @SensitiveData
     private String url;
     @SensitiveData
+    @HiddenInUI
     private String username;
     @SensitiveData
+    @HiddenInUI
     private String password;
     private boolean addPaused;
 

@@ -140,7 +140,7 @@ function getIndexerBoxFields(indexerModel, parentModel, isInitial, CategoriesSer
         fieldset.push(
             {
                 key: 'apiKey',
-                type: 'horizontalInput',
+                type: 'passwordSwitch',
                 templateOptions: {
                     type: 'text',
                     label: 'API Key'
@@ -183,7 +183,7 @@ function getIndexerBoxFields(indexerModel, parentModel, isInitial, CategoriesSer
         fieldset.push(
             {
                 key: 'username',
-                type: 'horizontalInput',
+                type: 'passwordSwitch',
                 templateOptions: {
                     type: 'text',
                     required: false,
@@ -205,7 +205,7 @@ function getIndexerBoxFields(indexerModel, parentModel, isInitial, CategoriesSer
         fieldset.push(
             {
                 key: 'username',
-                type: 'horizontalInput',
+                type: 'passwordSwitch',
                 templateOptions: {
                     type: 'text',
                     required: true,
