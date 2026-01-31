@@ -9,6 +9,7 @@ Usage:
     python build_and_release.py --resume
     python build_and_release.py --start-from build_releases --version 8.3.0 --next-version 8.3.1
     python build_and_release.py --list-steps
+    python build_and_release.py --reset-changes
 """
 
 import atexit
@@ -1015,6 +1016,57 @@ def list_steps() -> None:
     console.print(table)
 
 
+def reset_build_changes() -> None:
+    """Reset all changes made by the build process (changelog, pom.xml files, wrapperHashes2.json)."""
+    console.print("[yellow]Resetting build changes...[/yellow]")
+
+    files_to_reset = [
+        "changelog.md",
+        "pom.xml",
+        "core/pom.xml",
+        "other/mockserver/pom.xml",
+        "releases/pom.xml",
+        "releases/generic-release/pom.xml",
+        "releases/linux-amd64-release/pom.xml",
+        "releases/linux-arm64-release/pom.xml",
+        "releases/windows-release/pom.xml",
+        "shared/pom.xml",
+        "shared/mapping/pom.xml",
+        "shared/release-parser/pom.xml",
+        "tests/pom.xml",
+        "tests/system/pom.xml",
+        "core/src/main/resources/wrapperHashes2.json",
+    ]
+
+    # Check which files are actually modified
+    result = subprocess.run(
+        ["git", "diff", "--name-only"],
+        cwd=PROJECT_ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    modified_files = set(result.stdout.strip().split("\n")) if result.stdout.strip() else set()
+
+    # Only reset files that are actually modified
+    files_reset = []
+    for file_path in files_to_reset:
+        if file_path in modified_files:
+            subprocess.run(
+                ["git", "checkout", "--", file_path],
+                cwd=PROJECT_ROOT,
+                check=True,
+            )
+            files_reset.append(file_path)
+
+    if files_reset:
+        console.print(f"[green]✓[/green] Reset {len(files_reset)} file(s):")
+        for f in files_reset:
+            console.print(f"  - {f}")
+    else:
+        console.print("[dim]No modified files found to reset.[/dim]")
+
+
 def run_build(
     ctx: BuildContext,
     start_from: str | None = None,
@@ -1092,6 +1144,8 @@ def run_build(
                 console.print(f"  python build_and_release.py --resume")
                 console.print(f"\n[yellow]Or to restart this step:[/yellow]")
                 console.print(f"  python build_and_release.py --start-from {step.name} --version {ctx.version} --next-version {ctx.next_version}")
+                console.print(f"\n[yellow]To reset all build changes (changelog, pom.xml files), run:[/yellow]")
+                console.print(f"  python build_and_release.py --reset-changes")
                 raise SystemExit(1) from e
 
     # Success!
@@ -1119,6 +1173,7 @@ def run_build(
 @click.option("--start-from", "-s", "start_from", help="Start from a specific step (use --list-steps to see options)")
 @click.option("--list-steps", "-l", "show_steps", is_flag=True, help="List all available steps")
 @click.option("--clear-state", is_flag=True, help="Clear saved state and exit")
+@click.option("--reset-changes", is_flag=True, help="Reset all build changes (changelog.md, pom.xml files, wrapperHashes2.json) and exit")
 @click.option("--skip-preconditions", is_flag=True, help="Skip precondition checks (git clean, docker running, etc.)")
 def main(
     version: str | None,
@@ -1128,6 +1183,7 @@ def main(
     start_from: str | None,
     show_steps: bool,
     clear_state: bool,
+    reset_changes: bool,
     skip_preconditions: bool,
 ) -> None:
     """Build and release NZBHydra2."""
@@ -1139,6 +1195,10 @@ def main(
 
     if clear_state:
         BuildContext.clear_state()
+        return
+
+    if reset_changes:
+        reset_build_changes()
         return
 
     dry_run_mode = DryRunMode(dry_run)

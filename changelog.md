@@ -1,3 +1,13 @@
+### v8.3.1 (2026-01-30)
+
+**Fix** Option to overwrite result category N/A with the category of the search
+
+**Fix** Truncate notification body to 255 characters before saving to database to prevent DataIntegrityViolationException causing massive log files. See <a href="https://github.com/theotherp/nzbhydra2/issues/1040">#1040</a>
+
+**Fix** If a custom page size parameter (limit) is configured for a newznab indexer use that one instead of the hardcoded 1000.
+
+
+
 ### v8.3.0 (2026-01-16)
 
 **Feature** Added an option to show a quality indicator for movie releases. This helps identify release quality at a glance without needing to understand terms like HC, TS or DV. You can enable it in the searching section. The parser is adapted from Radarr. To comply with their GPL license, NZBHydra is now GPL as well. This doesn't change anything for you as a user.
