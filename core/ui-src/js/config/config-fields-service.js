@@ -1612,6 +1612,16 @@ function ConfigFields($injector) {
                     }
                 },
                 {
+                    key: 'overwriteNaWithSearchCategory',
+                    type: 'horizontalSwitch',
+                    templateOptions: {
+                        type: 'switch',
+                        label: 'Overwrite N/A with search category',
+                        help: "Use search category for items with N/A category",
+                        tooltip: 'Some indexers may return N/A as category for a result or the category mapping may have failed. With this option enabled the selected search category will be used.'
+                    }
+                },
+                {
                     type: 'help',
                     templateOptions: {
                         type: 'help',

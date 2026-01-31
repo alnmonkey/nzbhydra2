@@ -33,7 +33,7 @@ public class CategoriesConfig {
     private boolean enableCategorySizes = true;
     private List<Category> categories = new ArrayList<>();
     private String defaultCategory = "All";
-
+    private boolean overwriteNaWithSearchCategory;
 
     public void setCategories(List<Category> categories) {
         categories.sort(Comparator.comparing(Category::getName));

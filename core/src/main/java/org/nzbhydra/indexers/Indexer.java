@@ -7,6 +7,7 @@ import org.nzbhydra.config.BaseConfigHandler;
 import org.nzbhydra.config.ConfigChangedEvent;
 import org.nzbhydra.config.ConfigProvider;
 import org.nzbhydra.config.indexer.IndexerConfig;
+import org.nzbhydra.config.searching.SearchType;
 import org.nzbhydra.indexers.exceptions.IndexerAccessException;
 import org.nzbhydra.indexers.exceptions.IndexerAuthException;
 import org.nzbhydra.indexers.exceptions.IndexerErrorCodeException;
@@ -226,6 +227,7 @@ public abstract class Indexer<T> {
             } catch (Exception e) {
                 error("Error mapping search result title for " + searchResultItem.getTitle(), e);
             }
+            overwriteNaCategoryWithSearchTypeCategory(searchRequest, searchResultItem);
         }
 
         indexerSearchResult.setPageSize(searchResultItems.size());
@@ -246,6 +248,20 @@ public abstract class Indexer<T> {
         debug("Returning results {}-{} of {} available ({} already rejected)", indexerSearchResult.getOffset(), endIndex, indexerSearchResult.getTotalResults(), acceptorResult.getNumberOfRejectedResults());
 
         return indexerSearchResult;
+    }
+
+    private void overwriteNaCategoryWithSearchTypeCategory(SearchRequest searchRequest, SearchResultItem searchResultItem) {
+        if (!categoryProvider.getNotAvailable().equals(searchResultItem.getCategory()) || !configProvider.getBaseConfig().getCategoriesConfig().isOverwriteNaWithSearchCategory()) {
+            debug(LoggingMarkers.CATEGORY_MAPPING, "Search result {} with category {} not N/A or overwriting disabled ", searchResultItem.getTitle(), searchResultItem.getCategory().getName());
+            return;
+        }
+        if (searchRequest.getSearchType() == SearchType.SEARCH) {
+            debug(LoggingMarkers.CATEGORY_MAPPING, "Search type is SEARCH so no overwriting possible");
+            return;
+        }
+
+        debug(LoggingMarkers.CATEGORY_MAPPING, "Overwriting N/A category for {} with search category {}", searchResultItem.getTitle(), searchRequest.getCategory());
+        searchResultItem.setCategory(searchRequest.getCategory());
     }
 
     /**

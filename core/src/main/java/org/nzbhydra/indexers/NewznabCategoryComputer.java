@@ -3,6 +3,7 @@
 package org.nzbhydra.indexers;
 
 import lombok.extern.slf4j.Slf4j;
+import org.nzbhydra.config.ConfigProvider;
 import org.nzbhydra.config.category.Category;
 import org.nzbhydra.config.indexer.IndexerCategoryConfig;
 import org.nzbhydra.config.indexer.IndexerConfig;
@@ -24,9 +25,11 @@ public class NewznabCategoryComputer {
     private final ConcurrentHashMap<Integer, Category> idToCategory = new ConcurrentHashMap<>();
 
     private final CategoryProvider categoryProvider;
+    private final ConfigProvider configProvider;
 
-    public NewznabCategoryComputer(CategoryProvider categoryProvider) {
+    public NewznabCategoryComputer(CategoryProvider categoryProvider, ConfigProvider configProvider) {
         this.categoryProvider = categoryProvider;
+        this.configProvider = configProvider;
     }
 
     public void computeCategory(SearchResultItem searchResultItem, List<Integer> newznabCategories, IndexerConfig config) {
@@ -70,4 +73,5 @@ public class NewznabCategoryComputer {
             searchResultItem.setCategory(categoryProvider.getNotAvailable());
         }
     }
+
 }

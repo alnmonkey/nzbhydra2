@@ -97,7 +97,6 @@ public class Category {
             com.google.common.base.Objects.equal(requiredRegex, other.requiredRegex);
     }
 
-
     @Override
     public boolean equals(Object o) {
         if (this == o) {

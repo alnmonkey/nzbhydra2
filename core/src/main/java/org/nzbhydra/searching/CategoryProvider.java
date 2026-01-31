@@ -33,8 +33,12 @@ import java.util.stream.Collectors;
 @EnableConfigurationProperties
 public class CategoryProvider implements InitializingBean {
 
+    public static final Category naCategory = new Category("N/A");
 
     private static final Logger logger = LoggerFactory.getLogger(CategoryProvider.class);
+
+    @Autowired
+    protected BaseConfig baseConfig;
 
     /**
      * List of all categories in the order in which they are configured and to be shown in the dropdown
@@ -52,10 +56,6 @@ public class CategoryProvider implements InitializingBean {
     protected Map<Integer, Category> categoryMapByNumber = new HashMap<>();
     protected Map<List<Integer>, Category> categoryMapByMultipleNumber = new HashMap<>();
 
-    @Autowired
-    protected BaseConfig baseConfig;
-
-    public static final Category naCategory = new Category("N/A");
 
     public CategoryProvider() {
         naCategory.setApplyRestrictionsType(SearchSourceRestriction.NONE);
