@@ -17,7 +17,7 @@ public class ChangelogVersionEntry implements Comparable<ChangelogVersionEntry> 
 
     private String version;
     private String date;
-    private boolean isFinal;
+    private boolean isFinal = true;
     private List<ChangelogChangeEntry> changes;
 
     @Override
