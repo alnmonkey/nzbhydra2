@@ -1140,12 +1140,16 @@ def run_build(
                 progress.remove_task(task)
                 console.print(f"\n[red]✗ Step '{step.name}' failed: {e}[/red]")
                 console.print(f"[dim]Check log file for details: {ctx.log_file}[/dim]")
+
+                # Automatically reset build changes if we've passed the commit_maven_versions step
+                if ctx.is_completed("commit_maven_versions"):
+                    console.print(f"\n[yellow]Automatically resetting build changes...[/yellow]")
+                    reset_build_changes()
+
                 console.print(f"\n[yellow]To resume from this step, run:[/yellow]")
                 console.print(f"  python build_and_release.py --resume")
                 console.print(f"\n[yellow]Or to restart this step:[/yellow]")
                 console.print(f"  python build_and_release.py --start-from {step.name} --version {ctx.version} --next-version {ctx.next_version}")
-                console.print(f"\n[yellow]To reset all build changes (changelog, pom.xml files), run:[/yellow]")
-                console.print(f"  python build_and_release.py --reset-changes")
                 raise SystemExit(1) from e
 
     # Success!
