@@ -1,6 +1,6 @@
-### v8.3.1 (2026-01-30)
+### v8.4.0 (2026-01-31)
 
-**Fix** Option to overwrite result category N/A with the category of the search
+**Feature** Option to overwrite result category N/A with the category of the search
 
 **Fix** Truncate notification body to 255 characters before saving to database to prevent DataIntegrityViolationException causing massive log files. See <a href="https://github.com/theotherp/nzbhydra2/issues/1040">#1040</a>
 
