@@ -13,6 +13,8 @@
           text: "Hopefully fix NullPointerException when loading Torbox downloads."
       -   type: "fix"
           text: "Remove password requirement for SSL Keystore. See #1036"
+      -   type: "fix"
+          text: "Do not start if there's not at least 500MB free in data folder to ensure tha database file can be written. See #850"
 -   version: "v8.4.0"
     date: "2026-01-31"
     changes:

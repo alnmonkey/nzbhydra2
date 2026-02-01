@@ -65,6 +65,7 @@ public class NzbHydra {
 
     private static final Logger logger = LoggerFactory.getLogger(NzbHydra.class);
     public static final String BROWSER_DISABLED = "browser.disabled";
+    public static final long USABLE_MB_NEEDED = 500L;
 
     public static String[] originalArgs;
     private static ConfigurableApplicationContext applicationContext;
@@ -156,6 +157,14 @@ public class NzbHydra {
         //Check if we can write in the data folder. If not we can just quit now
         if (!dataFolderFile.exists() && !dataFolderFile.mkdirs()) {
             logger.error("Unable to read or write data folder {}", dataFolder);
+            System.exit(1);
+        }
+        //Check if we have enough disk space
+        long usableSpaceBytes = dataFolderFile.getUsableSpace();
+        long requiredSpaceBytes = USABLE_MB_NEEDED * 1024 * 1024;
+        if (usableSpaceBytes < requiredSpaceBytes) {
+            long usableSpaceMB = usableSpaceBytes / (1024 * 1024);
+            logger.error("Insufficient disk space in data folder {}. Required: {} MB, Available: {} MB", dataFolder, USABLE_MB_NEEDED, usableSpaceMB);
             System.exit(1);
         }
         if (isOsWindows()) {
