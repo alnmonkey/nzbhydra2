@@ -1,3 +1,19 @@
+### v8.4.1 (2026-02-01)
+
+**Fix** Fix several path traversal vulnerabilities.
+
+**Fix** Use custom page size parameter (limit) for Newznab indexers instead of the hardcoded value of 1000.
+
+**Fix** Releases were incorrectly shown as BETA in the updates view.
+
+**Fix** Hopefully fix NullPointerException when loading Torbox downloads.
+
+**Fix** SSL keystore password is no longer required. See <a href="https://github.com/theotherp/nzbhydra2/issues/1036">#1036</a>
+
+**Fix** Prevent startup if the data folder has less than 500 MB free space to ensure the database can be written. See <a href="https://github.com/theotherp/nzbhydra2/issues/850">#850</a>
+
+
+
 ### v8.4.0 (2026-01-31)
 
 **Feature** Option to overwrite result category N/A with the category of the search
