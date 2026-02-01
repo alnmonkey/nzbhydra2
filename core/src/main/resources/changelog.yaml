@@ -1,20 +1,20 @@
 #@formatter:off
--   version: "v8.4.2"
+-   version: "v8.4.1"
     date: "2026-02-01"
     final: true
     changes:
       -   type: "fix"
           text: "Fix several path traversal vulnerabilities."
       -   type: "fix"
-          text: "If a custom page size parameter (limit) is configured for a newznab indexer use that one instead of the hardcoded 1000."
+          text: "Use custom page size parameter (limit) for Newznab indexers instead of the hardcoded value of 1000."
       -   type: "fix"
-          text: "Releases were shown as BETA in the updates view."
+          text: "Releases were incorrectly shown as BETA in the updates view."
       -   type: "fix"
           text: "Hopefully fix NullPointerException when loading Torbox downloads."
       -   type: "fix"
-          text: "Remove password requirement for SSL Keystore. See #1036"
+          text: "SSL keystore password is no longer required. See #1036"
       -   type: "fix"
-          text: "Do not start if there's not at least 500MB free in data folder to ensure tha database file can be written. See #850"
+          text: "Prevent startup if the data folder has less than 500 MB free space to ensure the database can be written. See #850"
 -   version: "v8.4.0"
     date: "2026-01-31"
     changes:
