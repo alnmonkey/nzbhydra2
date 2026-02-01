@@ -125,12 +125,9 @@ function ConfigFields($injector) {
                             templateOptions: {
                                 type: 'password',
                                 label: 'SSL keystore password',
-                                required: true,
                                 help: 'Requires restart.'
                             }
                         }
-
-
                     ]
                 },
                 {

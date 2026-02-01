@@ -11,6 +11,8 @@
           text: "Releases were shown as BETA in the updates view."
       -   type: "fix"
           text: "Hopefully fix NullPointerException when loading Torbox downloads."
+      -   type: "fix"
+          text: "Remove password requirement for SSL Keystore. See #1036"
 -   version: "v8.4.0"
     date: "2026-01-31"
     changes:
