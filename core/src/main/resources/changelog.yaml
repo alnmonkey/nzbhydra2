@@ -5,7 +5,9 @@
       -   type: "fix"
           text: "If a custom page size parameter (limit) is configured for a newznab indexer use that one instead of the hardcoded 1000."
       -   type: "fix"
-          text: "Releases were shown as BETA in the updates view"
+          text: "Releases were shown as BETA in the updates view."
+      -   type: "fix"
+          text: "Hopefully fix NullPointerException when loading Torbox downloads."
     final: true
 -   version: "v8.4.0"
     date: "2026-01-31"

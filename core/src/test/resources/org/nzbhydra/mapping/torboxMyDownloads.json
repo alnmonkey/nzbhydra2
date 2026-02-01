@@ -1,0 +1,97 @@
+{
+  "success": true,
+  "error": null,
+  "detail": "Usenet downloads list retrieved successfully.",
+  "data": [
+    {
+      "id": 705346,
+      "created_at": "2026-01-24T04:34:41Z",
+      "updated_at": "2026-01-24T04:34:41Z",
+      "auth_id": "<redacted>",
+      "name": "Extrabasic.S01E01.German.AC3.DL.1080p.BDRip.x265-FuN",
+      "hash": "<redacted>",
+      "download_state": "cached",
+      "download_speed": 0,
+      "original_url": null,
+      "eta": 0,
+      "progress": 1,
+      "size": 961128865,
+      "download_id": "SABnzbd_nzo_kcc_ovp6",
+      "files": [
+        {
+          "id": 0,
+          "md5": null,
+          "hash": "<redacted>",
+          "name": "Extrabasic.S01E01.German.AC3.DL.1080p.BDRip.x265-FuN/Extrabasic.S01E01.German.AC3.DL.1080p.BDRip.x265-FuN.mkv",
+          "size": 961128865,
+          "zipped": false,
+          "s3_path": "<redacted>/Extrabasic.S01E01.German.AC3.DL.1080p.BDRip.x265-FuN/Extrabasic.S01E01.German.AC3.DL.1080p.BDRip.x265-FuN.mkv",
+          "infected": false,
+          "mimetype": "video/x-matroska",
+          "short_name": "Extrabasic.S01E01.German.AC3.DL.1080p.BDRip.x265-FuN.mkv",
+          "absolute_path": "/downloads/<redacted>/Extrabasic.S01E01.German.AC3.DL.1080p.BDRip.x265-FuN/Extrabasic.S01E01.German.AC3.DL.1080p.BDRip.x265-FuN.mkv",
+          "opensubtitles_hash": "adff2f144d853eda"
+        }
+      ],
+      "active": false,
+      "cached": true,
+      "download_present": true,
+      "download_finished": true,
+      "expires_at": null,
+      "server": null,
+      "cached_at": "2026-01-21T17:20:51Z"
+    },
+    {
+      "id": 700190,
+      "created_at": "2026-01-23T06:06:42Z",
+      "updated_at": "2026-01-23T06:11:26Z",
+      "auth_id": "<redacted>",
+      "name": "figure of knowledge S01E09 German AC3 DL 1080p BDRip x265-FuN",
+      "hash": "<redacted>",
+      "download_state": "completed",
+      "download_speed": 0,
+      "original_url": null,
+      "eta": 0,
+      "progress": 1,
+      "size": 864769076,
+      "download_id": "SABnzbd_nzo_je4fegy8",
+      "files": [
+        {
+          "id": 1,
+          "md5": null,
+          "hash": "<redacted>",
+          "name": "figure of knowledge S01E09 German AC3 DL 1080p BDRip x265-FuN/House-of-Usenet.com.url",
+          "size": 181,
+          "zipped": false,
+          "s3_path": "<redacted>/figure of knowledge S01E09 German AC3 DL 1080p BDRip x265-FuN/House-of-Usenet.com.url",
+          "infected": false,
+          "mimetype": "application/x-wine-extension-ini",
+          "short_name": "House-of-Usenet.com.url",
+          "absolute_path": "/downloads/<redacted>/figure of knowledge S01E09 German AC3 DL 1080p BDRip x265-FuN/House-of-Usenet.com.url",
+          "opensubtitles_hash": null
+        },
+        {
+          "id": 0,
+          "md5": null,
+          "hash": "<redacted>",
+          "name": "figure of knowledge S01E09 German AC3 DL 1080p BDRip x265-FuN/figure.of.knowledge.S01E09.German.AC3.DL.1080p.BDRip.x265-FuN.mkv",
+          "size": 864768895,
+          "zipped": false,
+          "s3_path": "<redacted>/figure of knowledge S01E09 German AC3 DL 1080p BDRip x265-FuN/figure.of.knowledge.S01E09.German.AC3.DL.1080p.BDRip.x265-FuN.mkv",
+          "infected": false,
+          "mimetype": "video/x-matroska",
+          "short_name": "figure.of.knowledge.S01E09.German.AC3.DL.1080p.BDRip.x265-FuN.mkv",
+          "absolute_path": "/downloads/<redacted>/figure of knowledge S01E09 German AC3 DL 1080p BDRip x265-FuN/figure.of.knowledge.S01E09.German.AC3.DL.1080p.BDRip.x265-FuN.mkv",
+          "opensubtitles_hash": "c6df8f5df6cf8779"
+        }
+      ],
+      "active": false,
+      "cached": true,
+      "download_present": true,
+      "download_finished": true,
+      "expires_at": "2026-02-22T06:11:26Z",
+      "server": 107,
+      "cached_at": "2026-01-23T06:11:26Z"
+    }
+  ]
+}

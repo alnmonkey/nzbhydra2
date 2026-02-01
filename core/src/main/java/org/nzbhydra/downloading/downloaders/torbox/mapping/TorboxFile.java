@@ -2,11 +2,13 @@
 
 package org.nzbhydra.downloading.downloaders.torbox.mapping;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Data;
 import org.nzbhydra.springnative.ReflectionMarker;
 
 @Data
 @ReflectionMarker
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class TorboxFile {
     private long id;
     private String md5;
@@ -19,4 +21,5 @@ public class TorboxFile {
     private String mimetype;
     private String short_name;
     private String absolute_path;
+    private String opensubtitles_hash;
 }

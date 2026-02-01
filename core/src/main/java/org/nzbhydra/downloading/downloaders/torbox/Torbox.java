@@ -190,7 +190,7 @@ public class Torbox extends Downloader {
 
     @Override
     public DownloaderStatus getStatus() throws DownloaderException {
-        List<TorboxDownload> downloadingEntries = getLastTorboxDownloads().stream().filter(x -> x.getDownloadState().equals("downloading")).toList();
+        List<TorboxDownload> downloadingEntries = getLastTorboxDownloads().stream().filter(x -> "downloading".equals(x.getDownloadState())).toList();
         long downloadSpeedKb = downloadingEntries.stream().mapToLong(TorboxDownload::getDownloadSpeedBytes).sum() / 1024;
         addDownloadRate(downloadSpeedKb);
         DownloaderStatus.DownloaderStatusBuilder statusBuilder = DownloaderStatus.builder()
@@ -222,7 +222,7 @@ public class Torbox extends Downloader {
     public List<DownloaderEntry> getHistory(Instant earliestDownload) throws DownloaderException {
         return getDownloaderEntries()
                 .stream()
-                .filter(x -> x.getStatus().equals("failed") || x.getStatus().equals("completed") || x.getStatus().equals("cached"))
+                .filter(x -> "failed".equals(x.getStatus()) || "completed".equals(x.getStatus()) || "cached".equals(x.getStatus()))
                 .toList();
     }
 
@@ -230,7 +230,7 @@ public class Torbox extends Downloader {
     public List<DownloaderEntry> getQueue(@Nullable Instant earliestDownload) throws DownloaderException {
         return getDownloaderEntries()
                 .stream()
-                .filter(x -> !x.getStatus().equals("failed") && !x.getStatus().equals("completed") && !x.getStatus().equals("cached"))
+                .filter(x -> !"failed".equals(x.getStatus()) && !"completed".equals(x.getStatus()) && !"cached".equals(x.getStatus()))
                 .toList();
     }
 
@@ -286,6 +286,9 @@ public class Torbox extends Downloader {
 
     @Override
     protected FileDownloadStatus getDownloadStatusFromDownloaderEntry(DownloaderEntry entry, StatusCheckType statusCheckType) {
+        if (entry.getStatus() == null) {
+            return FileDownloadStatus.NONE;
+        }
         switch (entry.getStatus()) {
             case "completed", "cached" -> {
                 return FileDownloadStatus.CONTENT_DOWNLOAD_SUCCESSFUL;

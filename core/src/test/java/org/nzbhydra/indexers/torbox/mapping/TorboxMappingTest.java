@@ -4,6 +4,7 @@ package org.nzbhydra.indexers.torbox.mapping;
 
 import org.junit.jupiter.api.Test;
 import org.nzbhydra.Jackson;
+import org.nzbhydra.downloading.downloaders.torbox.mapping.UsenetListResponse;
 
 import java.io.IOException;
 
@@ -27,7 +28,8 @@ class TorboxMappingTest {
         assertThat(container.getNzbs()).hasSize(2);
         assertThat(container.getNzbs().get(0).getTitle()).isEqualTo("The Crazy Android.");
 
-
+        UsenetListResponse usenetListResponse = Jackson.JSON_MAPPER.readValue(getClass().getResource("/org/nzbhydra/mapping/torboxMyDownloads.json"), UsenetListResponse.class);
+        assertThat(usenetListResponse).isNotNull();
     }
 
 }

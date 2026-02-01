@@ -2,6 +2,7 @@
 
 package org.nzbhydra.downloading.downloaders.torbox.mapping;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 import org.nzbhydra.springnative.ReflectionMarker;
@@ -11,8 +12,10 @@ import java.util.List;
 
 @Data
 @ReflectionMarker
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class TorboxDownload {
     private long id;
+    private Instant cached_at;
     private Instant created_at;
     private Instant updated_at;
     private String auth_id;
