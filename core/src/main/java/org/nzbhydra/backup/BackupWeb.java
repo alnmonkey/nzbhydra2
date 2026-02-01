@@ -68,6 +68,9 @@ public class BackupWeb {
     @Secured({"ROLE_ADMIN"})
     @RequestMapping(value = "/internalapi/backup/restore", method = RequestMethod.GET)
     public GenericResponse restore(@RequestParam String filename) throws Exception {
+        if (!isValidBackupFile(filename)) {
+            throw new IllegalArgumentException("Invalid backup file: " + filename);
+        }
         return backup.restore(filename);
     }
 
@@ -80,8 +83,15 @@ public class BackupWeb {
     @Secured({"ROLE_ADMIN"})
     @RequestMapping(value = "/internalapi/backup/download", method = RequestMethod.GET, produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
     public FileSystemResource getFile(@RequestParam("filename") String filename) throws Exception {
-        final FileSystemResource resource = new FileSystemResource(new File(backup.getBackupFolder(), filename));
-        return resource;
+        if (!isValidBackupFile(filename)) {
+            throw new IllegalArgumentException("Invalid backup file: " + filename);
+        }
+        return new FileSystemResource(new File(backup.getBackupFolder(), filename));
+    }
+
+    private boolean isValidBackupFile(String filename) {
+        return backup.getExistingBackups().stream()
+                .anyMatch(entry -> entry.getFilename().equals(filename));
     }
 
 }

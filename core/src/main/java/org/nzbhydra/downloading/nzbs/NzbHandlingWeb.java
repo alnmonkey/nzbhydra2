@@ -90,7 +90,7 @@ public class NzbHandlingWeb {
         logger.debug("downloadNzbZip: {}", zipFilepath);
         final Optional<File> matchingFile = fileHandler.getTemporaryZipFiles().stream().filter(x -> x.getAbsolutePath().equals(zipFilepath)).findFirst();
         if (matchingFile.isPresent()) {
-            return new FileSystemResource(zipFilepath);
+            return new FileSystemResource(matchingFile.get());
         }
         throw new RuntimeException("Not allowed to access file " + zipFilepath + " as it was not created by NZBHydra");
     }

@@ -69,10 +69,10 @@ public class DebugInfosWeb {
     @Secured({"ROLE_ADMIN"})
     @RequestMapping(value = "/internalapi/debuginfos/downloadlog", method = RequestMethod.GET, produces = MediaType.TEXT_PLAIN_VALUE)
     public FileSystemResource downloadLogFile(@RequestParam String logfilename) throws IOException {
-        File file = new File(new File(NzbHydra.getDataFolder(), "logs"), logfilename);
-        if (!file.getCanonicalFile().toPath().startsWith(new File(NzbHydra.getDataFolder()).getCanonicalFile().toPath())) {
-            throw new IOException("Log file not in data folder");
+        if (!logContentProvider.getLogFileNames().contains(logfilename)) {
+            throw new IOException("Invalid log file: " + logfilename);
         }
+        File file = new File(new File(NzbHydra.getDataFolder(), "logs"), logfilename);
         return new FileSystemResource(file);
     }
 

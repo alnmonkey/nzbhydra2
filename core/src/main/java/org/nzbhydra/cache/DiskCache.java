@@ -108,7 +108,9 @@ public class DiskCache extends AbstractValueAdaptingCache {
 
     @NotNull
     private File buildKeyFile(String keyString) {
-        return new File(cacheDir, keyString);
+        // Sanitize key to prevent path traversal - replace unsafe characters
+        String sanitizedKey = keyString.replaceAll("[/\\\\:*?\"<>|.]", "_");
+        return new File(cacheDir, sanitizedKey);
     }
 
     @Override
