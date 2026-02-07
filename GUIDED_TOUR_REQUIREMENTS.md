@@ -148,29 +148,34 @@ Create a new AngularJS service `GuidedTourService` that:
 A new REST endpoint pair:
 
 ```
-PUT  /internalapi/demomode        → activates demo mode
-DELETE /internalapi/demomode      → deactivates demo mode
+PUT    /internalapi/demomode        → activates demo mode for the current user
+DELETE /internalapi/demomode        → deactivates demo mode for the current user
 ```
 
-Alternatively, since the existing `MockSearch` uses a static boolean pattern in `ExternalApi`, a similar approach can be used: a static `demoMode` flag in `SearchWeb` (the internal search controller).
+Demo mode is **per-user** so that one user taking the tour does not affect other concurrent users. The backend maintains a `Set<String>` of usernames currently in demo mode.
 
-However, a **session-scoped or request-header approach** is safer to avoid affecting other concurrent users:
+**How the current user is identified:**
 
-- The frontend sends a custom header `X-Demo-Mode: true` with all requests during the tour.
-- A servlet filter or Spring interceptor checks this header and routes to demo data instead of real indexer calls.
+- **Auth configured (`FORM` or `BASIC`):** The current user is identified via Spring Security's `Principal` (injected into controller methods). In service-layer code where `Principal` is not available, `SessionStorage.username` is used —
+  this is a `ThreadLocal<String>` that the existing `Interceptor` populates from `request.getRemoteUser()` at the start of every request.
 
-**Recommended approach:** Use a simple static boolean flag (like `MockSearch.inMockingMode`) since NZBHydra2 is typically a single-user application. The flag is set via the REST endpoint.
+- **Auth not configured (`NONE`):** All requests arrive as the anonymous user `"AnonymousUser"` (set by `HydraAnonymousAuthenticationFilter`). In this case the set contains `"AnonymousUser"` and demo mode is effectively global — which is
+  correct because without auth there is only one logical user session.
+
+**Checking demo mode from anywhere in the request pipeline:** The static method `DemoModeWeb.isDemoModeActive()` reads `SessionStorage.username.get()` and checks membership in the set. Any controller or service in the request thread can
+call it without needing a `Principal` parameter.
+
+**Thread safety:** The set uses `ConcurrentHashMap.newKeySet()`. In practice the set will contain 0 or 1 entries.
 
 #### 3.3.2 Demo Mode Endpoints to Mock
 
 When demo mode is active, the following endpoints return mock data instead of performing real operations:
 
-| Endpoint                                        | Mock Behavior                                                          |
-|-------------------------------------------------|------------------------------------------------------------------------|
-| `POST /internalapi/search`                      | Returns realistic mock search results (see §3.3.3). No indexer calls.  |
-| `GET /internalapi/autocomplete/{type}`          | Returns mock autocomplete results (see §3.3.4). No external API calls. |
-| `PUT /internalapi/downloader/addNzbs`           | Returns a mock success response. No downloader communication.          |
-| `GET /internalapi/downloader/{name}/categories` | Returns mock downloader categories.                                    |
+| Endpoint                                        | Mock Behavior                                                         |
+|-------------------------------------------------|-----------------------------------------------------------------------|
+| `POST /internalapi/search`                      | Returns realistic mock search results (see §3.3.3). No indexer calls. |
+| `PUT /internalapi/downloader/addNzbs`           | Returns a mock success response. No downloader communication.         |
+| `GET /internalapi/downloader/{name}/categories` | Returns mock downloader categories.                                   |
 
 #### 3.3.3 Mock Search Results
 
@@ -180,8 +185,9 @@ object), not Newznab XML.
 **Approach:** Create a new class `DemoDataProvider` (or similar) in the `core` module that:
 
 1. Generates a `SearchResponse` with 20-50 `SearchResultWebTO` items.
-2. Items have realistic data:
-    - Varied titles based on the search query (e.g., "Linux Mint 21.3 x64", "Ubuntu 24.04 LTS", "Arch Linux 2024.01" for query "linux"; or "Interstellar 2014 1080p BluRay", "Interstellar 2014 2160p UHD" for movie searches).
+2. Items have realistic data using **Usenet naming conventions** (dot-separated words, quality tags, group suffix):
+   - Varied titles based on the search query (e.g., `Linux.Mint.21.3.Cinnamon.x64-LiNUX`, `Ubuntu.24.04.1.LTS.Desktop.amd64-LiNUX`, `Arch.Linux.2024.12.01.x86_64-LiNUX` for query "linux"; or `Interstellar.2014.1080p.BluRay.x264-SPARKS`,
+     `Interstellar.2014.2160p.UHD.BluRay.x265-TERMINAL` for movie searches).
     - Varied sizes (700MB to 15GB).
     - Varied ages (1 hour to 30 days).
     - Multiple fake indexers (e.g., "DemoIndexer1", "DemoIndexer2", "DemoIndexer3").
@@ -194,22 +200,16 @@ object), not Newznab XML.
 
 **Integration point:** In `SearchWeb.search()`, check the demo mode flag before calling `searcher.search()`. If demo mode is active, call `demoDataProvider.generateSearchResponse(parameters)` instead.
 
-#### 3.3.4 Mock Autocomplete Results
+#### 3.3.4 Autocomplete (No Mocking Required)
 
-When demo mode is active and the user (or tour) types a movie name:
+During demo mode, autocomplete uses the **real TMDB/TVMaze APIs** — no mocking is needed. This is the correct approach because:
 
-- `GET /internalapi/autocomplete/MOVIE?input=interstellar` returns a hardcoded list of movies:
-  ```json
-  [
-    {"title": "Interstellar", "year": 2014, "tmdbId": "157336", "imdbId": "tt0816692", "posterUrl": null},
-    {"title": "Interstellar Wars", "year": 2016, "tmdbId": "383427", "imdbId": "tt5083670", "posterUrl": null},
-    {"title": "Interstellar: Nolan's Odyssey", "year": 2014, "tmdbId": "518999", "posterUrl": null}
-  ]
-  ```
+- **Stability:** Autocomplete errors are handled gracefully — the existing code returns an empty list on any failure, so the tour never breaks.
+- **Speed:** Results are triple-cached (7-day Guava in-memory cache, Caffeine `@Cacheable`, and database). After the first call, subsequent requests are instant.
+- **Real poster images:** Using real autocomplete means real poster URLs are returned, making the tour visually polished without bundling placeholder images.
+- **Zero additional code:** No mock data, no demo mode check in `MediaInfoWeb`, no maintenance burden.
 
-**Note:** `posterUrl` can be `null` during demo mode (no external image fetching). Alternatively, use placeholder images bundled with the app.
-
-**Integration point:** In `MediaInfoWeb.autocomplete()`, check the demo mode flag. If active, return hardcoded results from `DemoDataProvider`.
+The tour step (§2.2, Phase 5, step 27) types "Interstellar" into the search field and the real TMDB API returns actual movie results with posters.
 
 #### 3.3.5 Mock Downloader
 
@@ -240,7 +240,7 @@ The search progress modal uses WebSocket (SockJS/STOMP) to show real-time indexe
 | File                                                              | Purpose                                                                            |
 |-------------------------------------------------------------------|------------------------------------------------------------------------------------|
 | `core/ui-src/js/guided-tour-service.js`                           | AngularJS service managing tour lifecycle, step definitions, and automated actions |
-| `core/src/main/java/org/nzbhydra/searching/DemoDataProvider.java` | Generates mock search results, autocomplete data, and download responses           |
+| `core/src/main/java/org/nzbhydra/searching/DemoDataProvider.java` | Generates mock search results and download responses                               |
 | `core/src/main/java/org/nzbhydra/searching/DemoModeWeb.java`      | REST controller for activating/deactivating demo mode                              |
 
 #### Modified Files
@@ -256,36 +256,51 @@ The search progress modal uses WebSocket (SockJS/STOMP) to show real-time indexe
 | `core/ui-src/js/search-controller.js`                                        | Minor additions to support tour's automated actions (expose methods for the tour service)    |
 | `core/ui-src/js/search-results-controller.js`                                | Minor additions for tour step registration on dynamic elements                               |
 | `core/src/main/java/org/nzbhydra/searching/SearchWeb.java`                   | Check demo mode flag, route to `DemoDataProvider` if active                                  |
-| `core/src/main/java/org/nzbhydra/mediainfo/MediaInfoWeb.java`                | Check demo mode flag, return mock autocomplete data if active                                |
 | `core/src/main/java/org/nzbhydra/downloading/downloaders/DownloaderWeb.java` | Check demo mode flag, return mock download success if active                                 |
 
 ---
 
 ## 4. Detailed Technical Design
 
-### 4.1 Demo Mode Flag
+### 4.1 Demo Mode Flag (Per-User)
 
 ```java
 // DemoModeWeb.java
 @RestController
 public class DemoModeWeb {
 
-    private static boolean demoModeActive = false;
+   private static final Set<String> usersInDemoMode = ConcurrentHashMap.newKeySet();
 
     @PutMapping("/internalapi/demomode")
     @Secured("ROLE_USER")
-    public void activateDemoMode() {
-        demoModeActive = true;
+    public void activateDemoMode(Principal principal) {
+       String username = resolveUsername(principal);
+       usersInDemoMode.add(username);
     }
 
     @DeleteMapping("/internalapi/demomode")
     @Secured("ROLE_USER")
-    public void deactivateDemoMode() {
-        demoModeActive = false;
+    public void deactivateDemoMode(Principal principal) {
+       String username = resolveUsername(principal);
+       usersInDemoMode.remove(username);
     }
 
+   /**
+    * Check if the current request's user is in demo mode.
+    * Can be called from any controller/service in the request thread
+    * because SessionStorage.username is a ThreadLocal populated by the Interceptor.
+    */
     public static boolean isDemoModeActive() {
-        return demoModeActive;
+       String username = SessionStorage.username.get();
+       return username != null && usersInDemoMode.contains(username);
+    }
+
+   private String resolveUsername(Principal principal) {
+      if (principal != null) {
+         return principal.getName();
+      }
+      // Fallback: when auth is NONE, SessionStorage has "AnonymousUser"
+      return SessionStorage.username.get();
     }
 }
 ```
@@ -303,10 +318,6 @@ public class DemoDataProvider {
         // Varied sizes, ages, indexers, categories
         // Some duplicates (same hash) for grouping demo
         // Realistic IndexerSearchMetaData for 3 fake indexers
-    }
-
-    public List<MediaInfoTO> generateAutocompleteResults(String input, AutocompleteType type) {
-        // Return hardcoded movie/TV suggestions matching the input
     }
 
     public AddNzbsResponse generateDownloadResponse(AddFilesRequest request) {
@@ -452,7 +463,8 @@ function injectFakeDownloader() {
 
 ### 5.1 Concurrent Users
 
-NZBHydra2 is typically single-user. The static `demoModeActive` flag is acceptable. If multi-user support is needed later, switch to a session-scoped attribute or request header.
+Demo mode is per-user via a `Set<String>` of usernames (see §4.1). Each user's demo mode is independent — one user taking the tour does not affect other users' search/download operations. When auth is not configured (`NONE`), all requests
+use `"AnonymousUser"`, making demo mode effectively global — which is correct since there is only one logical user session in that configuration.
 
 ### 5.2 Demo Mode Cleanup
 
@@ -482,44 +494,26 @@ The tour button and demo mode endpoints require `ROLE_USER` (same as search). No
 
 Generate ~30 results across 3 fake indexers with these characteristics:
 
-| #   | Title                            | Indexer      | Size   | Age | Category |
-|-----|----------------------------------|--------------|--------|-----|----------|
-| 1   | Linux Mint 21.3 Cinnamon x64 ISO | DemoIndexer1 | 2.8 GB | 2d  | PC       |
-| 2   | Ubuntu 24.04.1 LTS Desktop amd64 | DemoIndexer2 | 4.1 GB | 5d  | PC       |
-| 3   | Arch Linux 2024.12.01 x86_64     | DemoIndexer1 | 850 MB | 1d  | PC       |
-| 4   | Linux Mint 21.3 Cinnamon x64 ISO | DemoIndexer3 | 2.8 GB | 2d  | PC       |
-| ... | (more varied results)            | ...          | ...    | ... | ...      |
+| #   | Title                                  | Indexer      | Size   | Age | Category |
+|-----|----------------------------------------|--------------|--------|-----|----------|
+| 1   | Linux.Mint.21.3.Cinnamon.x64-LiNUX     | DemoIndexer1 | 2.8 GB | 2d  | PC       |
+| 2   | Ubuntu.24.04.1.LTS.Desktop.amd64-LiNUX | DemoIndexer2 | 4.1 GB | 5d  | PC       |
+| 3   | Arch.Linux.2024.12.01.x86_64-LiNUX     | DemoIndexer1 | 850 MB | 1d  | PC       |
+| 4   | Linux.Mint.21.3.Cinnamon.x64-LiNUX     | DemoIndexer3 | 2.8 GB | 2d  | PC       |
+| ... | (more varied results)                  | ...          | ...    | ... | ...      |
 
 Items 1 and 4 should share the same duplicate hash to demonstrate grouping.
 
-### 6.2 Mock Autocomplete for "Interstellar" (Movies category)
+### 6.2 Autocomplete for "Interstellar" (Movies category)
 
-```json
-[
-  {
-    "title": "Interstellar",
-    "year": 2014,
-    "tmdbId": "157336",
-    "imdbId": "tt0816692"
-  },
-  {
-    "title": "Interstellar Wars",
-    "year": 2016,
-    "tmdbId": "383427",
-    "imdbId": "tt5083670"
-  },
-  {
-    "title": "Interstellar: Beyond the Cosmos",
-    "year": 2020,
-    "tmdbId": "718999"
-  }
-]
-```
+**No mock data needed.** During demo mode, autocomplete hits the real TMDB API via `MediaInfoWeb.autocomplete()`. The existing triple-cached pipeline (Guava 7-day TTL, Caffeine `@Cacheable`, database) ensures fast responses. Errors return
+an empty list gracefully, so the tour never breaks. Real poster URLs are returned, providing a polished visual experience without bundled placeholder images.
 
 ### 6.3 Mock Movie Search Results for "Interstellar"
 
-Generate ~25 results with movie-specific data:
+Generate ~25 results with movie-specific data using Usenet naming conventions:
 
+- Titles like `Interstellar.2014.1080p.BluRay.x264-SPARKS`, `Interstellar.2014.2160p.UHD.BluRay.x265-TERMINAL`, `Interstellar.2014.720p.WEB-DL.DD5.1.H.264-FGT`, `Interstellar.2014.HDTV.x264-LOL`
 - Quality ratings (e.g., 720, 1080, 2160)
 - Quality source labels (BluRay, WEB-DL, HDTV)
 - Cover image URL (can be null or a bundled placeholder)
@@ -588,26 +582,25 @@ Key files and their roles in the search flow (for implementation reference):
 
 ## 8. Implementation Order
 
-Suggested order of implementation:
-
-1. **Install `angular-ui-tour`** – bower install, wire into gulp build, add module dependency.
-2. **Backend demo mode flag** – `DemoModeWeb` controller with PUT/DELETE endpoints.
-3. **`DemoDataProvider`** – mock search results, autocomplete data, download responses.
-4. **Backend integration** – add demo mode checks in `SearchWeb`, `MediaInfoWeb`, `DownloaderWeb`.
-5. **Mock WebSocket progress** – send fake search progress messages during demo search.
-6. **Frontend `GuidedTourService`** – tour lifecycle management, automated actions (typing, clicking).
-7. **Tour step definitions** – define all steps with content, placement, and lifecycle hooks.
-8. **HTML modifications** – add tour button to search page, add `tour-step` attributes to key elements.
-9. **Fake downloader injection** – inject mock downloader into config when demo mode is active.
-10. **Cleanup & polish** – demo mode timeout, page-load cleanup, styling adjustments.
-11. **Testing** – manual walkthrough of the full tour flow, edge cases.
+| Step | Task                            | Status   | Notes                                                                                                                                                                                                                                                                                                                                                                                                         |
+|------|---------------------------------|----------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| 1    | Install `angular-ui-tour`       | **Done** | Added to `bower.json`, ran `bower install`, added `'bm.uiTour'` to module deps in `nzbhydra.js`, verified `gulp vendor-scripts` builds.                                                                                                                                                                                                                                                                       |
+| 2    | Backend demo mode flag          | **Done** | `DemoModeWeb.java` created — `PUT`/`DELETE /internalapi/demomode`, per-user `Set<String>` via `ConcurrentHashMap.newKeySet()`, static `isDemoModeActive()` reads `SessionStorage.username`.                                                                                                                                                                                                                   |
+| 3    | `DemoDataProvider`              | **Done** | `DemoDataProvider.java` created — generates 30 `SearchResultWebTO` items with Usenet naming, 3 fake indexers, duplicate hash groups for grouping demo, quality ratings for movies, rejection reasons map, mock download response, mock downloader categories. Fixed `Random(42)` seed.                                                                                                                        |
+| 4    | Backend integration             | **Done** | `SearchWeb.search()` checks `DemoModeWeb.isDemoModeActive()` before real search; returns `demoDataProvider.generateSearchResponse()`. `DownloaderWeb.addNzb()` and `getCategories()` check demo mode and return mock responses.                                                                                                                                                                               |
+| 5    | Mock WebSocket progress         | **Done** | `SearchWeb.sendMockSearchProgress()` sends mock `SearchState` updates via `SimpMessageSendingOperations`: initial state → indexer selection (3 indexers) → staggered indexer completion (500/700/900ms delays) → search finished.                                                                                                                                                                             |
+| 6    | Frontend `GuidedTourService`    | **Done** | Tour lifecycle (start/end/isTourActive), automated action helpers (typeIntoField, clickElement, waitForElement, selectCategory, waitForResults, selectFirstCheckbox), fake downloader injection/removal. Includes duplicate step registration guard (`createStepIfNew`).                                                                                                                                      |
+| 7    | Tour step definitions           | **Done** | All 35 steps across 7 phases defined programmatically via `createStepIfNew()` in `registerSearchSteps()` (Phase 1 + 5) and `registerResultsSteps()` (Phase 2-4 + 6-7). Cross-view transitions use `tour.waitFor()`.                                                                                                                                                                                           |
+| 8    | HTML + Controller modifications | **Done** | `search.html`: added `ui-tour` directive wrapper, "Take a Tour" button, reactive tour-aware `ng-if`/`ng-show`. `search-controller.js`: injected `GuidedTourService`/`uiTourService`, added tour scope functions, bypassed indexer check in demo mode, added page-load cleanup. `search-results-controller.js`: injected `GuidedTourService`, added `registerResultsSteps()` call in `onFinishRender` handler. |
+| 9    | Fake downloader injection       | **Done** | Integrated into `GuidedTourService` — `injectFakeDownloader()` on tour start, `removeFakeDownloader()` on tour end.                                                                                                                                                                                                                                                                                           |
+| 10   | Cleanup & polish                | **Done** | Demo mode auto-deactivation timeout (10min) via `ScheduledExecutorService` in `DemoModeWeb`. Page-load cleanup in `SearchController` (fire-and-forget `DELETE /internalapi/demomode`). Tour backdrop + popover CSS in `miscellaneous.less`. Duplicate step guard in `GuidedTourService`. All builds pass (IntelliJ + Gulp scripts + Gulp LESS).                                                               |
+| 11   | Testing                         | Pending  | Manual walkthrough of the full tour flow, edge cases.                                                                                                                                                                                                                                                                                                                                                         |
 
 ---
 
-## 9. Open Questions
+## 9. Design Decisions (Resolved)
 
-1. **Poster images in autocomplete:** During demo mode, should we use bundled placeholder poster images, or is it acceptable to show autocomplete results without posters?
-2. **Tour content tone:** Should the tour text be formal/technical or friendly/casual?
-3. **Localization:** Should tour text be translatable, or is English-only acceptable?
-4. **Additional features for later:** The requirements mention "more features may come later." The tour system should be designed so that new steps can be easily added (e.g., for stats page, history page, config page).
-5. **Torrent results:** Should the demo data include torrent results to demonstrate torrent-specific features (seeders/peers), or stick to NZB-only?
+1. **Tour content tone:** Friendly and casual. Approachable language, not formal/technical.
+2. **Localization:** English only. No translation infrastructure needed.
+3. **Extensibility:** The tour system must be designed so that new steps and phases can be easily added later (e.g., for stats page, history page, config page). Step definitions should be modular and self-contained.
+4. **Torrent results:** NZB-only. Demo data does not include torrent results.

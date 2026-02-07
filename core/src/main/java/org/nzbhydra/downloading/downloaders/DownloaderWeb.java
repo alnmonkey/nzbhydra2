@@ -6,6 +6,8 @@ import org.nzbhydra.GenericResponse;
 import org.nzbhydra.config.ConfigProvider;
 import org.nzbhydra.config.downloading.DownloaderConfig;
 import org.nzbhydra.downloading.AddFilesRequest;
+import org.nzbhydra.searching.DemoDataProvider;
+import org.nzbhydra.searching.DemoModeWeb;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,6 +34,9 @@ public class DownloaderWeb {
     @Autowired
     private DownloaderStatusRetrieval downloaderStatusRetrieval;
 
+    @Autowired
+    private DemoDataProvider demoDataProvider;
+
     @Secured({"ROLE_ADMIN"})
     @RequestMapping(value = "/internalapi/downloader/checkConnection", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.APPLICATION_JSON_VALUE)
     public GenericResponse checkConnection(@RequestBody DownloaderConfig downloaderConfig) {
@@ -47,6 +52,10 @@ public class DownloaderWeb {
     @Secured({"ROLE_USER"})
     @RequestMapping(value = "/internalapi/downloader/addNzbs", method = RequestMethod.PUT, produces = MediaType.APPLICATION_JSON_VALUE)
     public AddNzbsResponse addNzb(@RequestBody AddFilesRequest addNzbsRequest) {
+        if (DemoModeWeb.isDemoModeActive()) {
+            logger.info("Demo mode active, returning mock download response");
+            return demoDataProvider.generateDownloadResponse(addNzbsRequest);
+        }
         Downloader downloader = downloaderProvider.getDownloaderByName(addNzbsRequest.getDownloaderName());
         return downloader.addBySearchResultIds(addNzbsRequest.getSearchResults(), addNzbsRequest.getCategory());
     }
@@ -54,6 +63,10 @@ public class DownloaderWeb {
     @Secured({"ROLE_USER"})
     @RequestMapping(value = "/internalapi/downloader/{downloaderName}/categories", produces = MediaType.APPLICATION_JSON_VALUE)
     public List<String> getCategories(@PathVariable("downloaderName") String downloaderName) {
+        if (DemoModeWeb.isDemoModeActive()) {
+            logger.info("Demo mode active, returning mock downloader categories");
+            return demoDataProvider.generateDownloaderCategories();
+        }
         Downloader downloader = downloaderProvider.getDownloaderByName(downloaderName);
         return downloader.getCategories();
     }

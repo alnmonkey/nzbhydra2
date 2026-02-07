@@ -92,3 +92,37 @@
   background-color: #dc3545;
   color: white;
 }
+
+// ─── Guided Tour ────────────────────────────────────────────────
+
+// Backdrop overlay shown behind the highlighted element
+.ui-tour-backdrop {
+  background-color: rgba(0, 0, 0, 0.5);
+  fill: rgba(0, 0, 0, 0.5);
+}
+
+// Tour popover styling
+.tour-popover {
+  max-width: 400px;
+  z-index: 1060;
+
+  .popover-title {
+    font-size: 15px;
+    font-weight: 600;
+  }
+
+  .popover-content {
+    font-size: 13px;
+    line-height: 1.5;
+  }
+}
+
+// Tour step navigation buttons
+.tour-step-navigation {
+  margin-top: 10px;
+  text-align: right;
+
+  .btn + .btn {
+    margin-left: 5px;
+  }
+}

@@ -53,6 +53,8 @@ public class SearchWeb {
     private SimpMessageSendingOperations messagingTemplate;
     @Autowired
     private CustomQueryAndTitleMappingHandler customQueryAndTitleMappingHandler;
+    @Autowired
+    private DemoDataProvider demoDataProvider;
 
     private final Lock lock = new ReentrantLock();
 
@@ -66,6 +68,12 @@ public class SearchWeb {
     @Secured({"ROLE_USER"})
     @RequestMapping(value = "/internalapi/search", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.APPLICATION_JSON_VALUE)
     public SearchResponse search(@RequestBody SearchRequestParameters parameters) {
+        if (DemoModeWeb.isDemoModeActive()) {
+            logger.info("Demo mode active, returning mock search results for query '{}'", parameters.getQuery());
+            sendMockSearchProgress(parameters.getSearchRequestId());
+            return demoDataProvider.generateSearchResponse(parameters);
+        }
+
         SearchRequest searchRequest = createSearchRequest(parameters);
         Stopwatch stopwatch = Stopwatch.createStarted();
         logger.info("New search request: {}", searchRequest);
@@ -97,6 +105,45 @@ public class SearchWeb {
 
     private void sendSearchState(SearchState searchState) {
         messagingTemplate.convertAndSend("/topic/searchState", searchState);
+    }
+
+    /**
+     * Sends mock WebSocket search progress messages to simulate 3 demo indexers completing
+     * their searches over ~2 seconds. This makes the progress modal feel realistic during the tour.
+     */
+    private void sendMockSearchProgress(long searchRequestId) {
+        String[] demoIndexerNames = {"DemoIndexer1", "DemoIndexer2", "DemoIndexer3"};
+
+        // Step 1: Initial state — search started
+        SearchState state = new SearchState(searchRequestId);
+        sendSearchState(state);
+
+        // Step 2: Indexer selection finished — 3 indexers selected
+        state.setIndexerSelectionFinished(true);
+        state.setIndexersSelected(demoIndexerNames.length);
+        state.getMessages().add(new SortableMessage("Searching DemoIndexer1", "DemoIndexer1"));
+        state.getMessages().add(new SortableMessage("Searching DemoIndexer2", "DemoIndexer2"));
+        state.getMessages().add(new SortableMessage("Searching DemoIndexer3", "DemoIndexer3"));
+        sendSearchState(state);
+
+        // Step 3: Simulate indexers finishing one by one with short delays
+        try {
+            for (int i = 0; i < demoIndexerNames.length; i++) {
+                Thread.sleep(500 + (i * 200)); // 500ms, 700ms, 900ms
+                state.setIndexersFinished(i + 1);
+                state.getMessages().set(i, new SortableMessage(
+                        demoIndexerNames[i] + " returned results", demoIndexerNames[i]
+                ));
+                sendSearchState(state);
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            logger.warn("Demo search progress simulation interrupted");
+        }
+
+        // Step 4: Search finished
+        state.setSearchFinished(true);
+        sendSearchState(state);
     }
 
 

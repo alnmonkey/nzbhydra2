@@ -6,7 +6,10 @@
   </a>
 </script>
 
-<div ng-if="::availableIndexers.length == 0">
+<div ui-tour ui-tour-backdrop="true" ui-tour-backdrop-padding="5" ui-tour-append-to-body="true"
+     ui-tour-on-end="onTourEnd()" ui-tour-on-ready="onTourReady()">
+  
+  <div ng-if="availableIndexers.length == 0 && !tourActive">
   <div class="row d-sm-flex justify-content-center">
     <div class="col-xs-20 col-sm-18 col-md-10 alert alert-info" role="alert">
       No indexers are configured or enabled. Please go to the <a ui-sref="root.config.indexers"
@@ -15,8 +18,8 @@
     </div>
   </div>
 </div>
-
-<div ng-show="::availableIndexers.length > 0">
+  
+  <div ng-show="availableIndexers.length > 0 || tourActive">
     <div class="row d-sm-flex justify-content-center">
 
         <div class="col-xs-20 col-sm-18 col-md-14">
@@ -122,8 +125,14 @@
                     </div>
                 </div>
             </form>
-
-            <div ng-if="::showIndexerSelection">
+          
+          <div class="text-center" style="margin-top: 5px;">
+            <button class="btn btn-info btn-sm" ng-click="startGuidedTour()" id="start-tour-button">
+              <span class="glyphicon glyphicon-question-sign"></span> Take a Tour
+            </button>
+          </div>
+          
+          <div ng-if="::showIndexerSelection">
                 <form class="form-horizontal">
                     <div class="form-group">
                         <label class="col-sm-2 control-label">Indexers</label>
@@ -195,4 +204,6 @@
 
     <!-- Search results go here -->
     <div ui-view="results"></div>
+</div>
+
 </div>

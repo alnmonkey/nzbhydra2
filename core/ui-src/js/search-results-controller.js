@@ -3,7 +3,7 @@ angular
     .controller('SearchResultsController', SearchResultsController);
 
 //SearchResultsController.$inject = ['blockUi'];
-function SearchResultsController($stateParams, $scope, $http, $q, $timeout, $document, blockUI, growl, localStorageService, SearchService, ConfigService, CategoriesService, DebugService, GenericStorageService, ModalService, $uibModal) {
+function SearchResultsController($stateParams, $scope, $http, $q, $timeout, $document, blockUI, growl, localStorageService, SearchService, ConfigService, CategoriesService, DebugService, GenericStorageService, ModalService, $uibModal, GuidedTourService) {
     // console.time("Presenting");
 
     $scope.limitTo = ConfigService.getSafe().searching.loadLimitInternal;
@@ -1015,6 +1015,11 @@ function SearchResultsController($stateParams, $scope, $http, $q, $timeout, $doc
             stopBlocking();
             console.log("Closing search status window because rendering is finished.")
             SearchService.getModalInstance().close();
+
+            // Register guided tour steps for results page after rendering is complete
+            if (GuidedTourService.isTourActive()) {
+                GuidedTourService.registerResultsSteps();
+            }
         }, 1);
     });
 

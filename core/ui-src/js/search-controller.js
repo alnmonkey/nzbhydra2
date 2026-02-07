@@ -2,7 +2,7 @@ angular
     .module('nzbhydraApp')
     .controller('SearchController', SearchController);
 
-function SearchController($scope, $http, $stateParams, $state, $uibModal, $timeout, $sce, growl, SearchService, focus, ConfigService, HydraAuthService, CategoriesService, $element, SearchHistoryService) {
+function SearchController($scope, $http, $stateParams, $state, $uibModal, $timeout, $sce, growl, SearchService, focus, ConfigService, HydraAuthService, CategoriesService, $element, SearchHistoryService, GuidedTourService, uiTourService) {
 
     function getNumberOrUndefined(number) {
         if (_.isUndefined(number) || _.isNaN(number) || number === "") {
@@ -75,6 +75,43 @@ function SearchController($scope, $http, $stateParams, $state, $uibModal, $timeo
     $scope.availableIndexers = [];
     $scope.selectedIndexers = [];
     $scope.autocompleteClass = "autocompletePosterMovies";
+
+    // ─── Guided Tour ────────────────────────────────────────────────
+    $scope.tourActive = GuidedTourService.isTourActive();
+
+    // Page-load cleanup: if no tour is running on the frontend, ensure
+    // demo mode is deactivated on the backend (handles stale sessions
+    // from closed tabs or browser crashes during a tour).
+    if (!$scope.tourActive) {
+        $http.delete('internalapi/demomode').catch(function () {
+            // Ignore errors — this is a best-effort cleanup
+        });
+    }
+
+    $scope.startGuidedTour = function () {
+        $scope.tourActive = true;
+        GuidedTourService.startTour();
+    };
+
+    $scope.onTourReady = function () {
+        var tour = uiTourService.getTour();
+        if (tour) {
+            GuidedTourService.registerSearchSteps(tour);
+        }
+    };
+
+    $scope.onTourEnd = function () {
+        GuidedTourService.endTour();
+    };
+
+    $scope.$on('tourEnded', function () {
+        $scope.tourActive = false;
+        $scope.query = '';
+        $scope.selectedItem = null;
+        $scope.category = CategoriesService.getDefault();
+        $scope.isAskById = $scope.category.searchType === "TVSEARCH" || $scope.category.searchType === "MOVIE";
+        $scope.isById.value = false;
+    });
 
     $scope.toggleCategory = function (searchCategory) {
         var oldCategory = $scope.category;
@@ -323,7 +360,7 @@ function SearchController($scope, $http, $stateParams, $state, $uibModal, $timeo
     };
 
     $scope.initiateSearch = function () {
-        if ($scope.selectedIndexers.length === 0) {
+        if ($scope.selectedIndexers.length === 0 && !GuidedTourService.isTourActive()) {
             growl.error("You didn't select any indexers");
             return;
         }
