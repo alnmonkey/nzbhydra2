@@ -1,5 +1,6 @@
 package org.nzbhydra.searching;
 
+import org.nzbhydra.config.ConfigProvider;
 import org.nzbhydra.downloading.AddFilesRequest;
 import org.nzbhydra.downloading.downloaders.AddNzbsResponse;
 import org.nzbhydra.searching.dtoseventsenums.IndexerSearchMetaData;
@@ -7,6 +8,7 @@ import org.nzbhydra.searching.dtoseventsenums.SearchRequestParameters;
 import org.nzbhydra.searching.dtoseventsenums.SearchResultWebTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
@@ -147,16 +149,19 @@ public class DemoDataProvider {
     private static final Map<String, Integer> QUALITY_MAP = new HashMap<>();
 
     static {
-        QUALITY_MAP.put("2160p", 2160);
-        QUALITY_MAP.put("1080p", 1080);
-        QUALITY_MAP.put("720p", 720);
-        QUALITY_MAP.put("HDTV", 720);
-        QUALITY_MAP.put("DVDRip", 480);
-        QUALITY_MAP.put("BDRip", 480);
-        QUALITY_MAP.put("BRRip", 480);
+        QUALITY_MAP.put("2160p", 10);
+        QUALITY_MAP.put("1080p", 8);
+        QUALITY_MAP.put("720p", 7);
+        QUALITY_MAP.put("HDTV", 6);
+        QUALITY_MAP.put("DVDRip", 5);
+        QUALITY_MAP.put("BDRip", 4);
+        QUALITY_MAP.put("BRRip", 4);
     }
 
     private static final String[] MOCK_CATEGORIES_DOWNLOADER = {"Default", "Movies", "TV", "Audio", "Software", "Games"};
+
+    @Autowired
+    private ConfigProvider configProvider;
 
     /**
      * Generates a mock SearchResponse with realistic results for the guided tour.
@@ -222,7 +227,7 @@ public class DemoDataProvider {
 
             // Quality rating for movie searches
             Integer qualityRating = null;
-            if (isMovieSearch) {
+            if (isMovieSearch && configProvider.getBaseConfig().getSearching().isShowMovieQualityIndicator()) {
                 qualityRating = extractQualityRating(title);
             }
 
@@ -244,7 +249,7 @@ public class DemoDataProvider {
                     .link("internalapi/nzb/demo-" + i)
                     .details_link("#")
                     .downloadType("NZB")
-                    .searchResultId("DEMO-RESULT-" + i)
+                    .searchResultId(String.valueOf(10001 + i))
                     .source(isMovieSearch ? extractSource(title) : null)
                     .qualityRating(qualityRating)
                     .hasNfo("NO")
@@ -293,11 +298,23 @@ public class DemoDataProvider {
 
     /**
      * Generates a mock successful download response for the guided tour.
+     * Includes a small delay so the spinner animation is visible before the checkmark appears.
      */
     public AddNzbsResponse generateDownloadResponse(AddFilesRequest request) {
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+
         List<Long> addedIds = new ArrayList<>();
-        for (int i = 0; i < request.getSearchResults().size(); i++) {
-            addedIds.add((long) (i + 1));
+        for (AddFilesRequest.SearchResult sr : request.getSearchResults()) {
+            try {
+                addedIds.add(Long.parseLong(sr.getSearchResultId()));
+            } catch (NumberFormatException e) {
+                logger.warn("Could not parse demo searchResultId '{}' to Long", sr.getSearchResultId());
+                addedIds.add(0L);
+            }
         }
 
         int count = request.getSearchResults().size();

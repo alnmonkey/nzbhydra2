@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.security.Principal;
 import java.util.List;
 
 @RestController
@@ -51,8 +52,8 @@ public class DownloaderWeb {
 
     @Secured({"ROLE_USER"})
     @RequestMapping(value = "/internalapi/downloader/addNzbs", method = RequestMethod.PUT, produces = MediaType.APPLICATION_JSON_VALUE)
-    public AddNzbsResponse addNzb(@RequestBody AddFilesRequest addNzbsRequest) {
-        if (DemoModeWeb.isDemoModeActive()) {
+    public AddNzbsResponse addNzb(@RequestBody AddFilesRequest addNzbsRequest, Principal principal) {
+        if (DemoModeWeb.isDemoModeActive(principal)) {
             logger.info("Demo mode active, returning mock download response");
             return demoDataProvider.generateDownloadResponse(addNzbsRequest);
         }
@@ -62,8 +63,8 @@ public class DownloaderWeb {
 
     @Secured({"ROLE_USER"})
     @RequestMapping(value = "/internalapi/downloader/{downloaderName}/categories", produces = MediaType.APPLICATION_JSON_VALUE)
-    public List<String> getCategories(@PathVariable("downloaderName") String downloaderName) {
-        if (DemoModeWeb.isDemoModeActive()) {
+    public List<String> getCategories(@PathVariable("downloaderName") String downloaderName, Principal principal) {
+        if (DemoModeWeb.isDemoModeActive(principal)) {
             logger.info("Demo mode active, returning mock downloader categories");
             return demoDataProvider.generateDownloaderCategories();
         }

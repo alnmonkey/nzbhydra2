@@ -98,6 +98,7 @@ public class MainConfig {
     private boolean startupBrowser = true;
     private boolean checkOpenPort = true;
     private boolean welcomeShown = false;
+    private boolean disableTour = false;
     protected String theme;
 
 

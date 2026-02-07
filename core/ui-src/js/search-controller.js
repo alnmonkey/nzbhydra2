@@ -78,6 +78,31 @@ function SearchController($scope, $http, $stateParams, $state, $uibModal, $timeo
 
     // ─── Guided Tour ────────────────────────────────────────────────
     $scope.tourActive = GuidedTourService.isTourActive();
+    $scope.tourHidden = false;
+    $scope.showTourButton = false;
+
+    function applyTourHiddenState(hidden) {
+        $scope.tourHidden = hidden;
+        $scope.showTourButton = !safeConfig.disableTour && !hidden;
+    }
+
+    function hideTourForever() {
+        if ($scope.tourHidden || safeConfig.disableTour) {
+            return;
+        }
+        applyTourHiddenState(true);
+        $http.put('internalapi/guidedtour/hide').catch(function () {
+            // Ignore errors — hide locally regardless
+        });
+    }
+
+    if (!safeConfig.disableTour) {
+        $http.get('internalapi/guidedtour/hidden').then(function (response) {
+            applyTourHiddenState(!!response.data);
+        }).catch(function () {
+            $scope.showTourButton = true;
+        });
+    }
 
     // Page-load cleanup: if no tour is running on the frontend, ensure
     // demo mode is deactivated on the backend (handles stale sessions
@@ -89,8 +114,15 @@ function SearchController($scope, $http, $stateParams, $state, $uibModal, $timeo
     }
 
     $scope.startGuidedTour = function () {
+        if ($scope.tourHidden || safeConfig.disableTour) {
+            return;
+        }
         $scope.tourActive = true;
         GuidedTourService.startTour();
+    };
+
+    $scope.hideTourForever = function () {
+        hideTourForever();
     };
 
     $scope.onTourReady = function () {
@@ -101,6 +133,7 @@ function SearchController($scope, $http, $stateParams, $state, $uibModal, $timeo
     };
 
     $scope.onTourEnd = function () {
+        hideTourForever();
         GuidedTourService.endTour();
     };
 
@@ -256,17 +289,27 @@ function SearchController($scope, $http, $stateParams, $state, $uibModal, $timeo
                 //modalInstance.close();
                 SearchService.setModalInstance(modalInstance);
                 if (!isSearchCancelled) {
+                    var goOptions = {inherit: true};
+                    if (GuidedTourService.isTourActive()) {
+                        // During the tour, tell UI-Router to only reload the
+                        // child state.  The keep-loop in transitionTo() skips
+                        // the ownParams.$$equals() check for all ancestors of
+                        // the reload state, so root.search (and its ui-tour
+                        // directive) stays alive even when URL params change.
+                        goOptions.reload = "root.search.results";
+                        // Don't update the URL – the tour uses demo data and
+                        // we don't want browser-back to replay it.
+                        goOptions.location = false;
+                    }
                     $state.go("root.search.results", {
                         minsize: $scope.minsize,
                         maxsize: $scope.maxsize,
                         minage: $scope.minage,
                         maxage: $scope.maxage
-                    }, {
-                        inherit: true
-                    });
+                    }, goOptions);
                 }
             },
-            function () {
+            function (err) {
                 modalInstance.close();
             });
     };
@@ -364,6 +407,27 @@ function SearchController($scope, $http, $stateParams, $state, $uibModal, $timeo
             growl.error("You didn't select any indexers");
             return;
         }
+
+        if (GuidedTourService.isTourActive()) {
+            // During the tour we must NOT call goToSearchUrl() because it does
+            // $state.go("root.search", ..., {reload: true}) which destroys the
+            // ui-tour directive (and the tour instance) and recreates the
+            // SearchController.
+            //
+            // We also must NOT silently update the parent state params with
+            // $state.go("root.search", stateParams, {notify:false, reload:false})
+            // because the subsequent startSearch() does
+            // $state.go("root.search.results", ..., {inherit:true}) which
+            // re-enters the parent state with the new params, causing UI-Router
+            // to destroy and recreate the parent view (and the ui-tour directive).
+            //
+            // Instead, just set $scope.mode directly and call startSearch().
+            // The URL won't reflect the search params, but that's fine for the tour.
+            $scope.mode = $scope.category.searchType.toLowerCase();
+            $scope.startSearch();
+            return;
+        }
+
         if ($scope.selectedItem) {
             //Movie or tv show was selected
             $scope.goToSearchUrl();
@@ -438,7 +502,7 @@ function SearchController($scope, $http, $stateParams, $state, $uibModal, $timeo
         });
     }
 
-    if ($scope.mode) {
+    if ($scope.mode && !GuidedTourService.isTourActive()) {
         $scope.startSearch();
     } else {
         //Getting the search history only makes sense when we're not currently searching

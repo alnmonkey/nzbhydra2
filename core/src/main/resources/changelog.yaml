@@ -1,4 +1,9 @@
 #@formatter:off
+-   version: "v8.5.0"
+    final: true
+    changes:
+      -   type: "feature"
+          text: "Added a guided tour. It highlights the most important search features and how results are presented. You can hide the tour or explicitly disable it in the config. Hydra will persist the tour state per user, i.e. every user can complete or ignore it on their own. This was a pain to implement but hopefully it will help users find features like ID based searching and categories which I always considered obvious."
 -   version: "v8.4.1"
     date: "2026-02-01"
     final: true

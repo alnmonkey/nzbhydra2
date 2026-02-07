@@ -22,6 +22,7 @@ public class SafeConfig {
     private SafeEmbyConfig emby;
     private boolean showNews;
     private boolean keepHistory;
+    private boolean disableTour;
 
 
     private List<SafeIndexerConfig> indexers;
@@ -38,6 +39,7 @@ public class SafeConfig {
         this.emby = new SafeEmbyConfig(baseConfig.getEmby());
         this.showNews = baseConfig.getMain().isShowNews();
         this.keepHistory = baseConfig.getMain().isKeepHistory();
+        this.disableTour = baseConfig.getMain().isDisableTour();
 
     }
 

@@ -11,7 +11,7 @@ var less = require('gulp-less');
 var livereload = require('gulp-livereload');
 var concat = require('gulp-concat');
 var sourcemaps = require('gulp-sourcemaps');
-var uglify = require('gulp-uglify');
+var terser = require('gulp-terser');
 var runSequence = require('run-sequence');
 var cleancss = require('gulp-clean-css');
 var cached = require('gulp-cached');
@@ -48,7 +48,34 @@ gulp.task('vendor-scripts', function () {
         .pipe(cached("vendor-scripts"))
         .pipe(sourcemaps.init())
         .pipe(concat('alllibs.js'))
-        .pipe(uglify())
+        .pipe(terser())
+        .pipe(sourcemaps.write("./"))
+        .pipe(gulp.dest(dest));
+});
+
+gulp.task('vendor-scripts-dev', function () {
+    var dest = staticFolder + '/js';
+    //Jquery must be loaded before angular for the bootstrap-switch to work
+    return gulp.src(wiredep(
+        {
+            overrides: {
+                "angular": {
+                    "dependencies": {
+                        "jquery": "1.x"
+                    }
+                }
+                , "angular-formly": {
+                    "dependencies": {
+                        "angular": "*",
+                        "api-check": "*"
+                    }
+                }
+            }
+        }
+    ).js)
+        .pipe(cached("vendor-scripts-dev"))
+        .pipe(sourcemaps.init())
+        .pipe(concat('alllibs.js'))
         .pipe(sourcemaps.write("./"))
         .pipe(gulp.dest(dest));
 });
@@ -80,6 +107,36 @@ gulp.task('vendor-css', function () {
         .pipe(sourcemaps.init())
         .pipe(concat('alllibs.css'))
         .pipe(cleancss())
+        .pipe(sourcemaps.write("."))
+        .pipe(gulp.dest(dest));
+});
+
+gulp.task('vendor-css-dev', function () {
+    var dest = staticFolder + '/css';
+    return merge(
+        gulp.src(wiredep({
+            exclude: [
+                "bower_components/bootstrap/",
+                "bower_components/bootstrap-switch/"
+            ]
+        }).css)
+            .pipe(sort())
+            .pipe(cached("vendor-css-dev")),
+        gulp.src(wiredep(
+            {
+                exclude: [
+                    "bower_components/bootstrap/",
+                    "bower_components/bootstrap-switch/"
+                ]
+            }
+        ).less)
+            .pipe(sort())
+            .pipe(cached("vendor-less-dev"))
+            .pipe(less())
+    )
+        .pipe(cached("vendor-less-and-css-dev"))
+        .pipe(sourcemaps.init())
+        .pipe(concat('alllibs.css'))
         .pipe(sourcemaps.write("."))
         .pipe(gulp.dest(dest));
 });
@@ -163,6 +220,55 @@ gulp.task('less', function () {
     return merge(brightTheme, greyTheme, darkTheme, autoTheme);
 });
 
+gulp.task('less-dev', function () {
+    var dest = staticFolder + '/css';
+    var brightTheme = gulp.src(uiSrcFolder + '/less/bright.less')
+        .pipe(cached("bright-dev"))
+        .on('error', swallowError)
+        .pipe(sourcemaps.init())
+        .pipe(less({
+            relativeUrls: true
+        }))
+        .on('error', swallowError)
+        .pipe(sourcemaps.write("."))
+        .pipe(gulp.dest(dest));
+
+    var greyTheme = gulp.src(uiSrcFolder + '/less/grey.less')
+        .pipe(cached("grey-dev"))
+        .on('error', swallowError)
+        .pipe(sourcemaps.init())
+        .pipe(less({
+            relativeUrls: true
+        }))
+        .on('error', swallowError)
+        .pipe(sourcemaps.write("."))
+        .pipe(gulp.dest(dest));
+
+    var darkTheme = gulp.src(uiSrcFolder + '/less/dark.less')
+        .pipe(cached("dark-dev"))
+        .on('error', swallowError)
+        .pipe(sourcemaps.init())
+        .pipe(less({
+            relativeUrls: true
+        }))
+        .on('error', swallowError)
+        .pipe(sourcemaps.write("."))
+        .pipe(gulp.dest(dest));
+
+    var autoTheme = gulp.src(uiSrcFolder + '/less/auto.less')
+        .pipe(cached("auto-dev"))
+        .on('error', swallowError)
+        .pipe(sourcemaps.init())
+        .pipe(less({
+            relativeUrls: true
+        }))
+        .on('error', swallowError)
+        .pipe(sourcemaps.write("."))
+        .pipe(gulp.dest(dest));
+
+    return merge(brightTheme, greyTheme, darkTheme, autoTheme);
+});
+
 gulp.task('copy-assets', function () {
     var fontDest = staticFolder + '/fonts';
     var fonts1 = gulp.src("bower_components/bootstrap/fonts/*")
@@ -220,6 +326,16 @@ gulp.task('index', function () {
     );
 });
 
+gulp.task('index-dev', function () {
+    log("Will build from '" + uiSrcFolder + "'");
+    log("Will build files into folder '" + staticFolder + "'");
+    runSequence(
+        ['scripts', 'less-dev', 'templates', 'vendor-scripts-dev', 'vendor-css-dev', 'copy-assets'],
+        ['copyStaticToClasses'],
+        ['reload']
+    );
+});
+
 function swallowError(error) {
     console.log(error);
     this.emit('end');
@@ -232,7 +348,7 @@ gulp.task('default', function () {
     liveReloadActive = true;
     log("Will watch '" + uiSrcFolder + "'");
     log("Will build files into folder '" + staticFolder + "'");
-    runSequence(["index"]);
+    runSequence(["index-dev"]);
     gulp.watch([uiSrcFolder + '/less/nzbhydra.less'], ['delMainLessCache']);
-    gulp.watch([uiSrcFolder + '/**/*', '!' + uiSrcFolder + '/hydra-ng/**'], ['index']);
+    gulp.watch([uiSrcFolder + '/**/*', '!' + uiSrcFolder + '/hydra-ng/**'], ['index-dev']);
 });

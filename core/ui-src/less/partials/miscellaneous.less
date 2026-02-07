@@ -95,6 +95,49 @@
 
 // ─── Guided Tour ────────────────────────────────────────────────
 
+// Prevent scrolling while tour backdrop is active
+.no-scrolling {
+  height: 100%;
+  overflow: hidden;
+}
+
+// Remove focus outline from tour popups (accessibility trade-off)
+.ui-tour-popup:focus {
+  outline: none;
+}
+
+// Orphan steps: centered in viewport, not attached to any element
+.ui-tour-popup-orphan {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  margin: 0;
+  transform: translateX(-50%) translateY(-50%);
+}
+
+// Improve popover arrow positioning for non-standard placements
+.ui-tour-popup.popover.bottom-left > .arrow,
+.ui-tour-popup.popover.top-left > .arrow {
+  left: 25px;
+}
+
+.ui-tour-popup.popover.bottom-right > .arrow,
+.ui-tour-popup.popover.top-right > .arrow {
+  left: auto;
+  right: 25px;
+}
+
+.ui-tour-popup.popover.right-top > .arrow,
+.ui-tour-popup.popover.left-top > .arrow {
+  top: 25px;
+}
+
+.ui-tour-popup.popover.left-bottom > .arrow,
+.ui-tour-popup.popover.right-bottom > .arrow {
+  top: auto;
+  bottom: 25px;
+}
+
 // Backdrop overlay shown behind the highlighted element
 .ui-tour-backdrop {
   background-color: rgba(0, 0, 0, 0.5);
@@ -125,4 +168,15 @@
   .btn + .btn {
     margin-left: 5px;
   }
+}
+
+// "Your turn" callout for user-action steps in the tour
+.tour-user-action {
+  background-color: #d9edf7;
+  border-left: 4px solid #31708f;
+  padding: 8px 10px;
+  margin: 8px 0;
+  border-radius: 2px;
+  font-weight: 600;
+  color: #31708f;
 }

@@ -29,6 +29,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.security.Principal;
 import java.util.Comparator;
 import java.util.Locale;
 import java.util.Map;
@@ -67,8 +68,8 @@ public class SearchWeb {
 
     @Secured({"ROLE_USER"})
     @RequestMapping(value = "/internalapi/search", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.APPLICATION_JSON_VALUE)
-    public SearchResponse search(@RequestBody SearchRequestParameters parameters) {
-        if (DemoModeWeb.isDemoModeActive()) {
+    public SearchResponse search(@RequestBody SearchRequestParameters parameters, Principal principal) {
+        if (DemoModeWeb.isDemoModeActive(principal)) {
             logger.info("Demo mode active, returning mock search results for query '{}'", parameters.getQuery());
             sendMockSearchProgress(parameters.getSearchRequestId());
             return demoDataProvider.generateSearchResponse(parameters);

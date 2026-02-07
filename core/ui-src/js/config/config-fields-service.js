@@ -652,6 +652,16 @@ function ConfigFields($injector) {
                             }
                         },
                         {
+                            key: 'disableTour',
+                            type: 'horizontalSwitch',
+                            templateOptions: {
+                                type: 'switch',
+                                label: 'Disable guided tour',
+                                help: 'Hide the guided tour button and prevent starting the tour.',
+                                advanced: true
+                            }
+                        },
+                        {
                             key: 'proxyImages',
                             type: 'horizontalSwitch',
                             templateOptions: {

@@ -47,7 +47,8 @@ function SearchResultsController($stateParams, $scope, $http, $q, $timeout, $doc
 
 
     $scope.isShowFilterButtons = ConfigService.getSafe().searching.showQuickFilterButtons;
-    $scope.isShowFilterButtonsVideo = $scope.isShowFilterButtons && ($stateParams.category.toLowerCase().indexOf("tv") > -1 || $stateParams.category.toLowerCase().indexOf("movie") > -1 || ConfigService.getSafe().searching.alwaysShowQuickFilterButtons);
+    var categoryLower = ($stateParams.category || "").toLowerCase();
+    $scope.isShowFilterButtonsVideo = $scope.isShowFilterButtons && (categoryLower.indexOf("tv") > -1 || categoryLower.indexOf("movie") > -1 || ConfigService.getSafe().searching.alwaysShowQuickFilterButtons);
     $scope.isShowCustomFilterButtons = ConfigService.getSafe().searching.customQuickFilterButtons.length > 0;
     $scope.filterButtonsModel = {
         source: {},
@@ -162,7 +163,7 @@ function SearchResultsController($stateParams, $scope, $http, $q, $timeout, $doc
     };
 
     $scope.shared = {
-        isGroupEpisodes: $scope.foo.groupEpisodes && $stateParams.category.toLowerCase().indexOf("tv") > -1 && $stateParams.episode === undefined,
+        isGroupEpisodes: $scope.foo.groupEpisodes && categoryLower.indexOf("tv") > -1 && $stateParams.episode === undefined,
         expandGroupsByDefault: $scope.foo.expandGroupsByDefault,
         showDownloadedIndicator: $scope.foo.showDownloadedIndicator,
         hideAlreadyDownloadedResults: $scope.foo.hideAlreadyDownloadedResults,
@@ -1005,20 +1006,26 @@ function SearchResultsController($stateParams, $scope, $http, $q, $timeout, $doc
     };
 
     $scope.$on("onFinishRender", function () {
-        console.log("Finished rendering results.")
+        console.log("[TOUR] onFinishRender fired in SearchResultsController");
         $scope.doShowResults = true;
         $timeout(function () {
             if ($scope.foo.scrollToResults) {
                 var searchResultsElement = angular.element(document.getElementById('display-options'));
-                $document.scrollToElement(searchResultsElement, 0, 500);
+                $document.scrollToElement(searchResultsElement, 0, 500)
+                    .catch(angular.noop); // Swallow scroll-cancel rejections (keydown/click during animation)
             }
             stopBlocking();
+            var mi = SearchService.getModalInstance();
             console.log("Closing search status window because rendering is finished.")
-            SearchService.getModalInstance().close();
+            mi.close();
 
             // Register guided tour steps for results page after rendering is complete
+            console.log("[TOUR] About to check isTourActive(), value=" + GuidedTourService.isTourActive());
             if (GuidedTourService.isTourActive()) {
+                console.log("[TOUR] Calling registerResultsSteps() from onFinishRender");
                 GuidedTourService.registerResultsSteps();
+            } else {
+                console.log("[TOUR] Tour NOT active, skipping registerResultsSteps()");
             }
         }, 1);
     });

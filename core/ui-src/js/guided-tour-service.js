@@ -32,6 +32,14 @@ function GuidedTourService($http, $timeout, $q, $rootScope, $sce, $state, uiTour
     var fakeDownloaderInjected = false;
     var tour = null;
     var registeredStepIds = {};
+    var enterKeyListener = null;
+    // Pending waitFor target step ID. Set before a state transition that
+    // destroys the ui-tour directive.  After the directive is recreated
+    // and registerSearchSteps() is called with the new tour instance,
+    // we re-issue tour.waitFor(pendingWaitForStepId) on the new tour so
+    // the tour resumes once the target step is added (e.g. by
+    // registerResultsSteps()).
+    var pendingWaitForStepId = null;
 
     return service;
 
@@ -39,27 +47,48 @@ function GuidedTourService($http, $timeout, $q, $rootScope, $sce, $state, uiTour
     // ─── Tour Lifecycle ────────────────────────────────────────────
 
     function startTour() {
+        console.log('[TOUR] startTour() called');
         return $http.put('internalapi/demomode').then(function () {
+            console.log('[TOUR] Demo mode activated');
             tourActive = true;
             registeredStepIds = {};
             injectFakeDownloader();
 
             tour = uiTourService.getTour();
             if (!tour) {
-                console.error('GuidedTourService: No tour found. Make sure ui-tour directive exists.');
+                console.error('[TOUR] No tour found. Make sure ui-tour directive exists.');
                 endTour();
                 return;
             }
 
+            // Add Enter key listener to advance tour
+            if (enterKeyListener) {
+                document.removeEventListener('keydown', enterKeyListener);
+            }
+            enterKeyListener = function (e) {
+                if (e.key === 'Enter' && tour && tour.getStatus() === tour.Status.ON) {
+                    e.preventDefault();
+                    tour.next();
+                }
+            };
+            document.addEventListener('keydown', enterKeyListener);
+
+            console.log('[TOUR] Starting tour...');
             return tour.start();
         }, function (err) {
             growl.error('Could not activate demo mode. Tour cannot start.');
-            console.error('Failed to activate demo mode', err);
+            console.error('[TOUR] Failed to activate demo mode', err);
         });
     }
 
     function endTour() {
+        console.log('[TOUR] endTour() called');
         tourActive = false;
+        // Remove Enter key listener
+        if (enterKeyListener) {
+            document.removeEventListener('keydown', enterKeyListener);
+            enterKeyListener = null;
+        }
         return $http.delete('internalapi/demomode').then(function () {
             removeFakeDownloader();
             $rootScope.$broadcast('tourEnded');
@@ -147,6 +176,9 @@ function GuidedTourService($http, $timeout, $q, $rootScope, $sce, $state, uiTour
                 if (scope) {
                     scope.$apply();
                 }
+                // Blur the field so that pressing Enter advances the tour
+                // instead of triggering the ng-enter search handler.
+                el[0].blur();
                 deferred.resolve();
             }
         }
@@ -246,16 +278,101 @@ function GuidedTourService($http, $timeout, $q, $rootScope, $sce, $state, uiTour
      */
     function createStepIfNew(config) {
         if (registeredStepIds[config.stepId]) {
+            console.log('[TOUR] Step already registered, skipping: ' + config.stepId);
             return;
         }
+        console.log('[TOUR] Creating step: ' + config.stepId + ' (order=' + config.order + ')');
+        console.log('[TOUR] Tour status before createStep: ' + tour.getStatus());
+        var steps = (typeof tour._getSteps === 'function') ? tour._getSteps() : null;
+        var internalStepsBefore = steps ? steps.length : '?';
         tour.createStep(config);
+        steps = (typeof tour._getSteps === 'function') ? tour._getSteps() : null;
+        var internalStepsAfter = steps ? steps.length : '?';
+        console.log('[TOUR] Steps count: ' + internalStepsBefore + ' -> ' + internalStepsAfter);
         registeredStepIds[config.stepId] = true;
     }
 
-    function registerResultsSteps() {
+    /**
+     * IDs of all steps registered in registerResultsSteps().
+     * Used by clearResultsSteps() to remove them before re-registration
+     * on the second results visit (Phase 6), which otherwise would hang
+     * because createStepIfNew + addStep both skip already-known steps.
+     */
+
+    /**
+     * Clears all results-phase step IDs from our registeredStepIds guard
+     * and removes matching steps from the tour's internal step array.
+     * This allows registerResultsSteps() to re-create them as fresh objects
+     * so that addStep() fires the waitFor() callback on the second results visit.
+     */
+    function clearResultsSteps() {
         if (!tour) {
             return;
         }
+        var currentStep = tour.getCurrentStep ? tour.getCurrentStep() : null;
+        var currentStepId = currentStep ? currentStep.stepId : null;
+        console.log('[TOUR] clearResultsSteps() called, currentStep=' + currentStepId +
+            ' tourStatus=' + tour.getStatus());
+        var idsToRemove = [
+            'resultsTable', 'sortByAge', 'trySortByAge', 'titleFilter', 'tryFilter',
+            'quickFilterButtons', 'downloadIcon', 'downloadSuccess', 'directDownload',
+            'resultCheckbox', 'clickCheckbox', 'tryShiftClick',
+            'selectionButton', 'bulkDownload', 'bulkDownloadDone',
+            'displayOptions', 'qualityIndicators', 'wrapUp'
+        ];
+        var removed = 0;
+        for (var i = 0; i < idsToRemove.length; i++) {
+            var id = idsToRemove[i];
+            delete registeredStepIds[id];
+            // Try to remove from tour's internal step array if possible
+            try {
+                if (typeof tour._getSteps === 'function') {
+                    var internalSteps = tour._getSteps();
+                    if (internalSteps) {
+                        for (var j = internalSteps.length - 1; j >= 0; j--) {
+                            if (internalSteps[j].stepId === id) {
+                                tour.removeStep(internalSteps[j]);
+                                removed++;
+                                break;
+                            }
+                        }
+                    }
+                }
+            } catch (e) {
+                console.warn('[TOUR] clearResultsSteps: error removing step "' + id + '":', e);
+            }
+        }
+        console.log('[TOUR] clearResultsSteps() removed ' + removed + ' steps from tour internal array');
+    }
+
+    function registerResultsSteps() {
+        var tourStatus = tour ? tour.getStatus() : -1;
+        console.log('[TOUR] registerResultsSteps() called, tourActive=' + tourActive +
+            ' tourStatus=' + tourStatus + ' hasResultsTable=' + (registeredStepIds['resultsTable'] || false));
+        if (!tour) {
+            console.log('[TOUR] registerResultsSteps() - no tour instance, returning');
+            return;
+        }
+
+        // Guard: onFinishRender fires every time the ng-repeat re-renders
+        // (sorting, filtering, etc.).  If results steps are already
+        // registered and the tour is actively ON we must NOT clear and
+        // re-create them — doing so removes the currently displayed step
+        // from the tour's internal stepList, which causes getStepByOffset()
+        // to return stepList[0] (the "welcome" step) on the next "Next"
+        // click, resetting the tour.
+        // We only allow re-registration when the tour is WAITING or PAUSED
+        // (the Phase 5→6 transition) or when steps haven't been created yet.
+        if (registeredStepIds['resultsTable'] && tourStatus === tour.Status.ON) {
+            console.log('[TOUR] registerResultsSteps() - results steps already registered and tour is ON, skipping re-registration');
+            return;
+        }
+
+        // On the second visit to results (Phase 6), we must clear old step
+        // objects so that createStepIfNew + addStep create fresh ones and
+        // the waitFor('displayOptions') callback fires. On the first visit
+        // this is a harmless no-op since no results steps exist yet.
+        clearResultsSteps();
 
         // Phase 2: Browsing Results (steps 8-13)
         createStepIfNew({
@@ -291,7 +408,7 @@ function GuidedTourService($http, $timeout, $q, $rootScope, $sce, $state, uiTour
             order: 100,
             title: 'Give It a Try!',
             content: $sce.trustAsHtml(
-                'Go ahead and <strong>click the "Age" column header</strong> to sort by age. ' +
+                '<div class="tour-user-action">Click the "Age" column header to sort by age.</div>' +
                 'Then click "Next" to continue.'
             ),
             placement: 'top'
@@ -315,23 +432,12 @@ function GuidedTourService($http, $timeout, $q, $rootScope, $sce, $state, uiTour
             order: 120,
             title: 'Try Filtering',
             content: $sce.trustAsHtml(
-                'Try typing a word to filter the results. ' +
+                '<div class="tour-user-action">Type a word into the filter box to narrow the results.</div>' +
                 'When you\'re done experimenting, click "Next" to continue.'
             ),
             placement: 'bottom'
         });
 
-        createStepIfNew({
-            stepId: 'quickFilterButtons',
-            selector: '.filter-button',
-            order: 130,
-            title: 'Quick Filter Buttons',
-            content: $sce.trustAsHtml(
-                'These buttons let you quickly filter by video source (HDTV, Blu-Ray, WEB, etc.) or quality (720p, 1080p, 2160p). ' +
-                'Click one to toggle it on or off.'
-            ),
-            placement: 'bottom'
-        });
 
         // Phase 3: Downloading Single Results (steps 14-16)
         createStepIfNew({
@@ -394,33 +500,43 @@ function GuidedTourService($http, $timeout, $q, $rootScope, $sce, $state, uiTour
             order: 180,
             title: 'Try It!',
             content: $sce.trustAsHtml(
-                '<strong>Click this checkbox</strong> to select the first result. Then click "Next".'
-            ),
-            placement: 'right'
-        });
-
-        createStepIfNew({
-            stepId: 'shiftClickExplain',
-            selector: '.result-checkbox',
-            order: 190,
-            title: 'Shift+Click for Range',
-            content: $sce.trustAsHtml(
-                'Hold <strong>Shift</strong> and click another checkbox to select all results between your two clicks. ' +
-                'This is great for grabbing a batch of results quickly.'
+                '<div class="tour-user-action">Click this checkbox to select the first result.</div>' +
+                'Then click "Next".'
             ),
             placement: 'right'
         });
 
         createStepIfNew({
             stepId: 'tryShiftClick',
-            selector: '.result-checkbox',
-            order: 200,
-            title: 'Try Shift+Click',
+            selector: '#tour-shift-click-target',
+            order: 190,
+            title: 'Shift+Click for Range',
             content: $sce.trustAsHtml(
-                'Try <strong>Shift+clicking</strong> another checkbox further down the list. ' +
+                'Hold <strong>Shift</strong> and click <strong>this</strong> checkbox to select all results between your first click and this one. ' +
+                'This is great for grabbing a batch of results quickly.' +
+                '<div class="tour-user-action">Hold <strong>Shift</strong> and click this checkbox.</div>' +
                 'Then click "Next" when you\'re ready.'
             ),
-            placement: 'right'
+            placement: 'right',
+            onShow: function () {
+                // Dynamically mark a checkbox further down the list as the
+                // Shift+Click target so it's highlighted by the backdrop and
+                // the user can actually click it.  The previous step already
+                // had the user click the first checkbox, so we pick the 4th
+                // (index 3) to give a visible range selection.
+                var checkboxes = document.querySelectorAll('.result-checkbox');
+                var targetIndex = Math.min(3, checkboxes.length - 1);
+                if (checkboxes.length > 0 && targetIndex >= 0) {
+                    checkboxes[targetIndex].id = 'tour-shift-click-target';
+                }
+            },
+            onHide: function () {
+                // Clean up the temporary ID
+                var el = document.getElementById('tour-shift-click-target');
+                if (el) {
+                    el.removeAttribute('id');
+                }
+            }
         });
 
         createStepIfNew({
@@ -464,13 +580,34 @@ function GuidedTourService($http, $timeout, $q, $rootScope, $sce, $state, uiTour
             ),
             placement: 'bottom',
             onNext: function () {
-                // Navigate back to search page for Phase 5 (movie search)
-                $state.go('root.search', {}, {inherit: false, notify: true, reload: true});
-                return tour.waitFor('movieSearchIntro');
+                // Navigate back to search page for Phase 5 (movie search).
+                // Going from child state root.search.results to parent
+                // root.search just removes the results view.
+                console.log('[TOUR] bulkDownloadDone onNext: navigating to root.search');
+                $state.go('root.search', {}, {inherit: true, notify: true, reload: false});
+                // Pause the tour to hide the current popover and backdrop,
+                // then schedule startAt() for the movie search phase.
+                // Return $q.reject() to stop goTo() from advancing sequentially.
+                pendingWaitForStepId = 'movieSearchIntro';
+                console.log('[TOUR] bulkDownloadDone onNext: pausing tour, scheduling startAt("movieSearchIntro")');
+                return tour.pause().then(function () {
+                    $timeout(function () {
+                        if (tour && tour.hasStep('movieSearchIntro')) {
+                            console.log('[TOUR] Starting at movieSearchIntro');
+                            pendingWaitForStepId = null;
+                            tour.startAt('movieSearchIntro');
+                        }
+                    }, 300);
+                    // Throw instead of return $q.reject() to stop goTo()'s
+                    // hide/show chain.  throw rejects the outer promise directly
+                    // via processQueue's try/catch without creating an intermediate
+                    // rejected promise that Angular flags as "unhandled rejection".
+                    throw 'tour_paused';
+                });
             }
         });
 
-        // Phase 6: Display Options (steps 31-34)
+        // Phase 6: Display Options (single step — just highlight)
         createStepIfNew({
             stepId: 'displayOptions',
             selector: '#display-options',
@@ -478,65 +615,38 @@ function GuidedTourService($http, $timeout, $q, $rootScope, $sce, $state, uiTour
             title: 'Display Options',
             content: $sce.trustAsHtml(
                 'This dropdown lets you customize how results are displayed. You can toggle things like ' +
-                '<strong>duplicate grouping</strong>, <strong>movie covers</strong>, <strong>episode grouping</strong>, and more.'
+                '<strong>duplicate grouping</strong>, <strong>movie covers</strong>, <strong>episode grouping</strong>, and more.<br><br>' +
+                'Feel free to explore these options on your own after the tour!'
             ),
-            placement: 'bottom'
+            placement: 'left'
         });
 
-        createStepIfNew({
-            stepId: 'displayOptionsOpen',
-            selector: '#display-options',
-            order: 320,
-            title: 'Opening Display Options',
-            content: $sce.trustAsHtml(
-                'The dropdown is now open. Each option changes how results appear in the table below.'
-            ),
-            placement: 'bottom',
-            onShow: function () {
-                // Open the display options dropdown
-                var btn = document.querySelector('#display-options .btn');
-                if (btn) {
-                    angular.element(btn).triggerHandler('click');
-                }
-                return $timeout(angular.noop, 300);
-            }
-        });
+        if (ConfigService.getSafe().searching.showQualityIndicator) {
+            createStepIfNew({
+                stepId: 'qualityIndicators',
+                selector: '.quality-badge',
+                order: 330,
+                title: 'Quality Indicators',
+                content: $sce.trustAsHtml(
+                    'These quality indicators estimate the overall quality of a movie release, scored from <strong>1</strong> to <strong>10</strong>.'
+                ),
+                placement: 'right'
+            });
+        }
 
-        createStepIfNew({
-            stepId: 'displayOptionsHighlight',
-            selector: '#display-options',
-            order: 330,
-            title: 'Key Options',
-            content: $sce.trustAsHtml(
-                '<strong>Show duplicate display triggers</strong> reveals which results are duplicates across indexers.<br>' +
-                '<strong>Show movie covers</strong> displays poster images in movie results.<br>' +
-                '<strong>Group TV results</strong> bundles episodes together for cleaner browsing.'
-            ),
-            placement: 'bottom'
-        });
-
-        createStepIfNew({
-            stepId: 'tryDisplayOptions',
-            selector: '#display-options',
-            order: 340,
-            title: 'Try Toggling',
-            content: $sce.trustAsHtml(
-                'Try toggling an option to see how it changes the results display. ' +
-                'Click "Next" when you\'re done.'
-            ),
-            placement: 'bottom',
-            onNext: function () {
-                // Close the dropdown if open
-                var dropdown = document.querySelector('#display-options .dropdown-menu');
-                if (dropdown && dropdown.classList.contains('show')) {
-                    var btn = document.querySelector('#display-options .btn');
-                    if (btn) {
-                        angular.element(btn).triggerHandler('click');
-                    }
-                }
-                return $timeout(angular.noop, 200);
-            }
-        });
+        if (ConfigService.getSafe().searching.showQuickFilterButtons) {
+            createStepIfNew({
+                stepId: 'quickFilterButtons',
+                selector: '.filter-button',
+                order: 340,
+                title: 'Quick Filter Buttons',
+                content: $sce.trustAsHtml(
+                    'These buttons let you quickly filter by video source (HDTV, Blu-Ray, WEB, etc.) or quality (720p, 1080p, 2160p). ' +
+                    'Click one to toggle it on or off.'
+                ),
+                placement: 'bottom'
+            });
+        }
 
         // Phase 7: Wrap-Up (step 35)
         createStepIfNew({
@@ -555,6 +665,43 @@ function GuidedTourService($http, $timeout, $q, $rootScope, $sce, $state, uiTour
             placement: 'bottom',
             orphan: true
         });
+
+        // ── Fallback: manually resume tour if stuck ──────────────────
+        // angular-ui-tour uses ES2017 async/await internally but
+        // returns AngularJS $q promises.  When resumeWhenFound() is
+        // called synchronously from addStep(), the native 'await' on
+        // $q.resolve() inside showStep() can stall because no
+        // AngularJS digest cycle is triggered.  This $timeout fires
+        // inside a digest and calls startAt() to reliably show the
+        // first results step.
+        //
+        // Determine which step to resume at:
+        //   Phase 1→2 transition: pendingWaitForStepId === 'resultsTable'
+        //   Phase 5→6 transition: pendingWaitForStepId === 'displayOptions'
+        // If pendingWaitForStepId is null the waitFor/resumeWhenFound
+        // mechanism on the live tour may still be stuck, so we also
+        // fall back based on tour status alone.
+        $timeout(function () {
+            if (!tour) {
+                return;
+            }
+            var status = tour.getStatus();
+            console.log('[TOUR] registerResultsSteps fallback check: status=' + status +
+                ' pendingWaitFor=' + pendingWaitForStepId);
+            if (status === tour.Status.WAITING || status === tour.Status.PAUSED) {
+                var targetStepId = pendingWaitForStepId || 'resultsTable';
+                var step = tour.hasStep(targetStepId) ? targetStepId : null;
+                if (step) {
+                    console.log('[TOUR] Tour stuck in status ' + status +
+                        ', manually starting at "' + targetStepId + '"');
+                    pendingWaitForStepId = null;
+                    tour.startAt(targetStepId);
+                } else {
+                    console.warn('[TOUR] Fallback: target step "' + targetStepId +
+                        '" not found in tour step list');
+                }
+            }
+        }, 200);
     }
 
 
@@ -562,7 +709,12 @@ function GuidedTourService($http, $timeout, $q, $rootScope, $sce, $state, uiTour
     // These are registered from SearchController when the tour directive initializes
 
     function registerSearchSteps(tourInstance) {
+        console.log('[TOUR] registerSearchSteps() called, pendingWaitFor=' + pendingWaitForStepId);
         tour = tourInstance;
+        // Clear previously registered step IDs — the old tour instance
+        // (and its internal step array) was destroyed.  All steps must
+        // be re-created on the new tour instance.
+        registeredStepIds = {};
 
         // Phase 1: Basic Search (steps 1-7)
         createStepIfNew({
@@ -573,7 +725,10 @@ function GuidedTourService($http, $timeout, $q, $rootScope, $sce, $state, uiTour
             content: $sce.trustAsHtml(
                 'This tour will walk you through searching and browsing results in NZBHydra2. ' +
                 'We\'ll cover searching, filtering, sorting, downloading, and customizing your experience.<br><br>' +
-                'Click "Next" to get started!'
+                'Most steps happen <strong>automatically</strong>. ' +
+                'When it\'s <em>your</em> turn to try something, you\'ll see a prompt like this:' +
+                '<div class="tour-user-action">Try clicking the column header to sort by age.</div>' +
+                'Press <strong>Enter</strong> or click <strong>Next</strong> to continue!'
             ),
             placement: 'bottom',
             orphan: true,
@@ -587,7 +742,7 @@ function GuidedTourService($http, $timeout, $q, $rootScope, $sce, $state, uiTour
             title: 'Categories',
             content: $sce.trustAsHtml(
                 'This dropdown lets you pick a search category. Categories control what type of content is searched ' +
-                '(e.g., Movies, TV, Audio). Picking a specific category can also unlock extra features like autocomplete.'
+                '(e.g., Movies, TV, Audio). Picking a specific category can also unlock extra features like autocomplete and will almost always produce better results.'
             ),
             placement: 'bottom',
             backdrop: true
@@ -644,18 +799,28 @@ function GuidedTourService($http, $timeout, $q, $rootScope, $sce, $state, uiTour
                 'Click the <strong>Go!</strong> button to search all your configured indexers. ' +
                 'In this demo, we\'ll get mock results so no real indexers are contacted.'
             ),
-            placement: 'bottom',
+            placement: 'left',
             backdrop: true,
             onNext: function () {
                 // Trigger the search
+                console.log('[TOUR] goButton onNext: triggering search');
                 var goBtn = document.querySelector('#startsearch');
                 if (goBtn) {
                     var scope = angular.element(goBtn).scope();
                     if (scope && scope.initiateSearch) {
+                        console.log('[TOUR] goButton onNext: calling scope.initiateSearch()');
                         scope.initiateSearch();
+                    } else {
+                        console.error('[TOUR] goButton onNext: initiateSearch not found on scope');
                     }
+                } else {
+                    console.error('[TOUR] goButton onNext: #startsearch element not found');
                 }
-                // Wait for results to load, then wait for the resultsTable step
+                // Save the waitFor target so it survives the ui-tour
+                // directive being destroyed and recreated during the
+                // root.search → root.search.results state transition.
+                pendingWaitForStepId = 'resultsTable';
+                console.log('[TOUR] goButton onNext: saved pendingWaitForStepId="resultsTable", calling tour.waitFor');
                 return tour.waitFor('resultsTable');
             }
         });
@@ -675,14 +840,18 @@ function GuidedTourService($http, $timeout, $q, $rootScope, $sce, $state, uiTour
             orphan: true,
             backdrop: true,
             onShow: function () {
-                // Clear the search field and selected item
+                // Clear the search field and selected item.
+                // Use $timeout instead of $apply() to avoid "$digest already
+                // in progress" errors — onShow is often called from within a
+                // $timeout chain that is already inside a digest cycle.
                 var el = document.querySelector('#searchfield');
                 if (el) {
                     var scope = angular.element(el).scope();
                     if (scope) {
-                        scope.query = '';
-                        scope.selectedItem = null;
-                        scope.$apply();
+                        $timeout(function () {
+                            scope.query = '';
+                            scope.selectedItem = null;
+                        });
                     }
                 }
                 return $timeout(angular.noop, 200);
@@ -727,7 +896,7 @@ function GuidedTourService($http, $timeout, $q, $rootScope, $sce, $state, uiTour
             title: 'Autocomplete Results',
             content: $sce.trustAsHtml(
                 'Here are the autocomplete suggestions! Each shows the movie title, year, and a poster image. ' +
-                'Select one to search by its database ID.'
+                'The tour will automatically select the first result for you.'
             ),
             placement: 'bottom',
             backdrop: true,
@@ -739,7 +908,53 @@ function GuidedTourService($http, $timeout, $q, $rootScope, $sce, $state, uiTour
                     // Also try triggering mousedown + click for typeahead
                     items[0].dispatchEvent(new MouseEvent('mousedown', {bubbles: true}));
                 }
-                return $timeout(angular.noop, 500);
+                // Fix: uib-typeahead may bind the full item object to query after
+                // our click trigger. Clean it up after a tick so the search field
+                // doesn't show "[object Object]".
+                return $timeout(function () {
+                    var searchField = document.querySelector('#searchfield');
+                    if (searchField) {
+                        var searchScope = angular.element(searchField).scope();
+                        if (searchScope) {
+                            if (typeof searchScope.query === 'object' || (searchScope.query && searchScope.query.toString() === '[object Object]')) {
+                                searchScope.query = '';
+                            }
+                            if (!searchScope.selectedItem && searchScope.selectAutocompleteItem) {
+                                // The onSelect callback didn't fire — manually invoke it
+                                // with the data from the first autocomplete match
+                                var firstMatch = items[0];
+                                var matchScope = angular.element(firstMatch).scope();
+                                if (matchScope && matchScope.match && matchScope.match.model) {
+                                    searchScope.selectAutocompleteItem(matchScope.match.model);
+                                }
+                            }
+                            searchScope.$apply();
+                        }
+                        // Blur the field and hide the autocomplete dropdown.
+                        // When advancing via Enter the field keeps focus and
+                        // the dropdown stays visible — closing it explicitly
+                        // ensures consistent behaviour regardless of input method.
+                        searchField.blur();
+                        searchField.dispatchEvent(new KeyboardEvent('keydown', {
+                            key: 'Escape',
+                            keyCode: 27,
+                            which: 27,
+                            bubbles: true
+                        }));
+                    }
+                    document.body.dispatchEvent(new MouseEvent('click', {bubbles: true}));
+                    // Hide the typeahead dropdown in case it's still open
+                    var dropdown = document.querySelector('.uib-typeahead-popup');
+                    if (dropdown) {
+                        var dropdownScope = angular.element(dropdown).scope();
+                        if (dropdownScope && angular.isDefined(dropdownScope.isOpen)) {
+                            dropdownScope.isOpen = false;
+                            dropdownScope.$applyAsync();
+                        }
+                        dropdown.classList.add('ng-hide');
+                        dropdown.style.display = 'none';
+                    }
+                }, 500);
             }
         });
 
@@ -764,18 +979,51 @@ function GuidedTourService($http, $timeout, $q, $rootScope, $sce, $state, uiTour
             content: $sce.trustAsHtml(
                 'Let\'s hit <strong>Go!</strong> again to search for Interstellar releases.'
             ),
-            placement: 'bottom',
+            placement: 'left',
             backdrop: true,
             onNext: function () {
+                console.log('[TOUR] movieGoButton onNext: triggering movie search');
                 var goBtn = document.querySelector('#startsearch');
                 if (goBtn) {
                     var scope = angular.element(goBtn).scope();
                     if (scope && scope.initiateSearch) {
+                        console.log('[TOUR] movieGoButton onNext: calling scope.initiateSearch()');
                         scope.initiateSearch();
+                    } else {
+                        console.error('[TOUR] movieGoButton onNext: initiateSearch not found on scope');
                     }
+                } else {
+                    console.error('[TOUR] movieGoButton onNext: #startsearch element not found');
                 }
+                // Save the waitFor target so it survives the ui-tour
+                // directive being destroyed and recreated during the
+                // root.search → root.search.results state transition.
+                pendingWaitForStepId = 'displayOptions';
+                console.log('[TOUR] movieGoButton onNext: saved pendingWaitForStepId="displayOptions", calling tour.waitFor');
                 return tour.waitFor('displayOptions');
             }
         });
+
+        // If there is a pending waitFor (saved before a state transition
+        // destroyed the old tour), set up a listener to resume the tour
+        // when the target step is added by registerResultsSteps().
+        //
+        // We cannot call tour.waitFor() here because the new tour has no
+        // current step, and waitFor() internally calls pause() which
+        // calls hideStep(null) and throws.  Instead we listen for the
+        // 'stepAdded' event and call startAt() which works on a fresh tour.
+        if (pendingWaitForStepId) {
+            var stepId = pendingWaitForStepId;
+            pendingWaitForStepId = null;
+            console.log('[TOUR] Setting up stepAdded listener for pending step "' + stepId + '" on new tour instance');
+            var onStepAdded = function (step) {
+                if (step.stepId === stepId) {
+                    console.log('[TOUR] Pending step "' + stepId + '" found! Starting tour at that step.');
+                    tour.removeListener('stepAdded', onStepAdded);
+                    tour.startAt(step);
+                }
+            };
+            tour.on('stepAdded', onStepAdded);
+        }
     }
 }

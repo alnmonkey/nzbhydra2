@@ -76,7 +76,11 @@
     "angular-bootstrap-colorpicker": "^3.0.32",
     "sockjs-client": "^1.0.3",
     "stompjs": "^4.0.8",
-    "angular-ui-tour": "~0.9.4"
+    "cfp-angular-hotkeys": "1.7.0",
+    "hone": "1.1.0",
+    "tether": "1.4.0",
+    "angular-scroll": "1.0.0",
+    "angular-bind-html-compile": "1.4.1"
   },
   "resolutions": {
     "angular-ui-select": "^0.18.0",

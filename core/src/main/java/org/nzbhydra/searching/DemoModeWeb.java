@@ -66,9 +66,11 @@ public class DemoModeWeb {
     @RequestMapping(value = "/internalapi/demomode", method = RequestMethod.DELETE)
     public void deactivateDemoMode(Principal principal) {
         String username = resolveUsername(principal);
-        usersInDemoMode.remove(username);
+        boolean wasActive = usersInDemoMode.remove(username);
         activationTimes.remove(username);
-        logger.info("Demo mode deactivated for user '{}'", username);
+        if (wasActive) {
+            logger.info("Demo mode deactivated for user '{}'", username);
+        }
     }
 
     /**
@@ -76,8 +78,8 @@ public class DemoModeWeb {
      * Can be called from any controller/service in the request thread
      * because SessionStorage.username is a ThreadLocal populated by the Interceptor.
      */
-    public static boolean isDemoModeActive() {
-        String username = SessionStorage.username.get();
+    public static boolean isDemoModeActive(Principal principal) {
+        String username = resolveUsername(principal);
         return username != null && usersInDemoMode.contains(username);
     }
 
@@ -107,7 +109,7 @@ public class DemoModeWeb {
         });
     }
 
-    private String resolveUsername(Principal principal) {
+    private static String resolveUsername(Principal principal) {
         if (principal != null) {
             return principal.getName();
         }

@@ -28,6 +28,8 @@ The project is a search aggregator for Usenet indexers, built with Spring Boot (
 
 **Always prefer IntelliJ MCP tools over Maven CLI commands.** Maven is only a fallback when MCP tools are unavailable or insufficient.
 
+DO NOT USE intellij_search_in_files_by_text AS IT'S BUGGY
+
 ### Building & Compiling
 
 - Use `intellij_build_project` to compile and check for errors after edits.
@@ -117,7 +119,8 @@ Resolve the library ID first, then fetch the relevant docs. Do this automaticall
 ### Frontend (Legacy AngularJS)
 
 - The frontend is legacy AngularJS located in `core/ui-src`.
-- **Do not** manually build frontend resources. A **Gulp watch instance is run by the user** and automatically rebuilds frontend assets on change. Just edit the source files.
+- **Do not** manually build frontend resources. A **Gulp watch instance** runs via the IntelliJ run configuration named **"default"** and automatically rebuilds frontend assets on change. Just edit the source files.
+- **IMPORTANT:** If frontend resource changes are not taking effect, check whether the **"default"** run configuration is running in IntelliJ. If it is not running, **ask the user to start it** before proceeding.
 - After editing frontend files, you **may run Gulp tasks** to verify the UI source compiles correctly. Useful tasks:
     - `gulp scripts` -- compiles/concatenates JavaScript files.
     - `gulp less` -- compiles LESS stylesheets to CSS.

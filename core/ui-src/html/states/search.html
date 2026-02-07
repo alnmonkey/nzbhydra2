@@ -126,10 +126,20 @@
                 </div>
             </form>
           
-          <div class="text-center" style="margin-top: 5px;">
-            <button class="btn btn-info btn-sm" ng-click="startGuidedTour()" id="start-tour-button">
-              <span class="glyphicon glyphicon-question-sign"></span> Take a Tour
-            </button>
+          <div class="text-center" style="margin-top: 5px;" ng-if="showTourButton">
+            <div class="btn-group" uib-dropdown>
+              <button class="btn btn-info btn-sm" ng-click="startGuidedTour()" id="start-tour-button">
+                <span class="glyphicon glyphicon-question-sign"></span> Take a Tour
+              </button>
+              <button class="btn btn-info btn-sm dropdown-toggle" uib-dropdown-toggle aria-haspopup="true" aria-expanded="false">
+                <span class="caret"></span>
+              </button>
+              <ul class="dropdown-menu" uib-dropdown-menu>
+                <li>
+                  <a href="" ng-click="hideTourForever()">Hide tour button</a>
+                </li>
+              </ul>
+            </div>
           </div>
           
           <div ng-if="::showIndexerSelection">

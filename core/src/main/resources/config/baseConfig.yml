@@ -290,6 +290,7 @@ main:
   databaseWriteDelay: 5000
   deleteBackupsAfterWeeks: 4
   disableSslLocally: false
+  disableTour: false
   dereferer: null
   host: "0.0.0.0"
   instanceCounterDownloaded: false
