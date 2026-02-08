@@ -35,7 +35,7 @@ from rich.table import Table
 
 # Track active subprocesses for cleanup on interrupt (supports multiple parallel processes)
 _active_processes: list[subprocess.Popen] = []
-_processes_lock = __import__('threading').Lock()
+_processes_lock = __import__("threading").Lock()
 
 
 def _register_process(process: subprocess.Popen) -> None:
@@ -54,7 +54,9 @@ def _unregister_process(process: subprocess.Popen) -> None:
 def _cleanup_subprocesses() -> None:
     """Terminate all active subprocesses."""
     with _processes_lock:
-        for process in _active_processes[:]:  # Copy list to avoid modification during iteration
+        for process in _active_processes[
+            :
+        ]:  # Copy list to avoid modification during iteration
             try:
                 if process.poll() is None:  # Still running
                     process.terminate()
@@ -78,7 +80,7 @@ def _signal_handler(signum, frame) -> None:
 # Register cleanup handlers
 atexit.register(_cleanup_subprocesses)
 signal.signal(signal.SIGINT, _signal_handler)
-if hasattr(signal, 'SIGTERM'):
+if hasattr(signal, "SIGTERM"):
     signal.signal(signal.SIGTERM, _signal_handler)
 
 
@@ -285,6 +287,7 @@ def run_command(
     # Execute with real-time streaming to log file
     # On Windows, use shell=True to resolve .cmd/.bat extensions (like mvn.cmd)
     use_shell = ctx.is_windows
+    shell_cmd: str | None = None
     if use_shell:
         # Use subprocess.list2cmdline for proper Windows command line quoting
         shell_cmd = subprocess.list2cmdline([str(c) for c in cmd])
@@ -296,15 +299,21 @@ def run_command(
     def read_output(proc: subprocess.Popen, q: queue.Queue) -> None:
         """Thread function to read process output."""
         try:
+            if proc.stdout is None:
+                return
             for line in proc.stdout:
                 q.put(line)
         finally:
             q.put(None)  # Signal end of output
 
+    process: subprocess.Popen | None = None
+    cmd_to_run = shell_cmd if use_shell else cmd
+    if cmd_to_run is None:
+        raise ValueError("Command is not set")
     try:
         # Use Popen for real-time output streaming
         process = subprocess.Popen(
-            shell_cmd if use_shell else cmd,
+            cmd_to_run,
             cwd=cwd or PROJECT_ROOT,
             env=full_env,
             stdout=subprocess.PIPE,
@@ -397,7 +406,8 @@ def run_command(
         return result
 
     except subprocess.CalledProcessError as e:
-        _unregister_process(process)
+        if process is not None:
+            _unregister_process(process)
         duration = time.time() - start_time
         console.print(f"    [red]Failed after {_format_duration(duration)}[/red]")
         with open(ctx.log_file, "a", encoding="utf-8") as f:
@@ -499,7 +509,17 @@ def load_tokens(ctx: BuildContext) -> None:
             null_device = "NUL" if ctx.is_windows else "/dev/null"
             result = run_command(
                 ctx,
-                ["curl", "-s", "-o", null_device, "-w", "%{http_code}", "-H", f"Authorization: token {ctx.github_token}", "https://api.github.com"],
+                [
+                    "curl",
+                    "-s",
+                    "-o",
+                    null_device,
+                    "-w",
+                    "%{http_code}",
+                    "-H",
+                    f"Authorization: token {ctx.github_token}",
+                    "https://api.github.com",
+                ],
                 "Validating GitHub token",
             )
             if result and result.stdout.strip() == "200":
@@ -612,6 +632,33 @@ def commit_maven_versions(ctx: BuildContext) -> None:
     )
 
 
+@step("build_frontend_assets", "Build frontend assets (gulp index)")
+def build_frontend_assets(ctx: BuildContext) -> None:
+    """Build minified frontend assets before backend build."""
+    if ctx.dry_run == DryRunMode.PRINT:
+        console.print("  [cyan]PRINT mode: Skipping frontend build[/cyan]")
+        return
+    run_command(
+        ctx,
+        ["npx", "gulp", "index"],
+        "Building frontend assets",
+        cwd=PROJECT_ROOT / "core" / "ui-src",
+    )
+
+
+@step("stage_frontend_assets", "Stage frontend assets for commit")
+def stage_frontend_assets(ctx: BuildContext) -> None:
+    """Stage built frontend assets for release commit."""
+    if ctx.dry_run == DryRunMode.PRINT:
+        console.print("  [cyan]PRINT mode: Skipping staging frontend assets[/cyan]")
+        return
+    run_command(
+        ctx,
+        ["git", "add", "core/src/main/resources/static"],
+        "Staging frontend assets",
+    )
+
+
 @step("build_core_jar", "Build core JAR")
 def build_core_jar(ctx: BuildContext) -> None:
     """Build the core JAR file."""
@@ -667,6 +714,7 @@ def _build_windows_executable(ctx: BuildContext, log_file: Path) -> str | None:
     """Build the Windows native executable. Returns error message or None on success."""
     # Create a temporary context with separate log file
     from copy import copy
+
     build_ctx = copy(ctx)
     build_ctx.log_file = log_file
 
@@ -721,6 +769,7 @@ def _build_windows_executable(ctx: BuildContext, log_file: Path) -> str | None:
 def _build_linux_amd64(ctx: BuildContext, log_file: Path) -> str | None:
     """Build Linux amd64 executable. Returns error message or None on success."""
     from copy import copy
+
     build_ctx = copy(ctx)
     build_ctx.log_file = log_file
 
@@ -754,6 +803,7 @@ def _build_linux_amd64(ctx: BuildContext, log_file: Path) -> str | None:
 def _build_linux_arm64(ctx: BuildContext, log_file: Path) -> str | None:
     """Build Linux arm64 executable. Returns error message or None on success."""
     from copy import copy
+
     build_ctx = copy(ctx)
     build_ctx.log_file = log_file
 
