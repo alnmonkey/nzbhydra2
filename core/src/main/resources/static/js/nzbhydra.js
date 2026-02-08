@@ -13228,6 +13228,12 @@ function SavedSearchesController($scope, $http, $sce, $filter, SearchHistoryServ
         return $sce.trustAsHtml(result.join(", "));
     };
 
+    $scope.deleteSearch = function (index) {
+        $http.delete("internalapi/savedsearches/" + index).then(function () {
+            $scope.savedSearches.splice(index, 1);
+        });
+    };
+
     $scope.buildSearchLink = function (request) {
         var params = SearchHistoryService.getStateParamsForRepeatedSearch(request);
         var cleanedParams = {};

@@ -27,6 +27,7 @@ import org.nzbhydra.searching.dtoseventsenums.SearchRequestParameters;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.annotation.Secured;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -49,6 +50,16 @@ public class SavedSearchesWeb {
     @RequestMapping(value = "/internalapi/savedsearches", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public List<SavedSearch> getSavedSearches() {
         return configProvider.getBaseConfig().getSearching().getSavedSearches();
+    }
+
+    @Secured({"ROLE_USER"})
+    @RequestMapping(value = "/internalapi/savedsearches/{index}", method = RequestMethod.DELETE)
+    public void deleteSearch(@PathVariable int index) {
+        List<SavedSearch> savedSearches = configProvider.getBaseConfig().getSearching().getSavedSearches();
+        if (index >= 0 && index < savedSearches.size()) {
+            savedSearches.remove(index);
+            baseConfigHandler.save(true);
+        }
     }
 
     @Secured({"ROLE_USER"})
