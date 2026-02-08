@@ -26,6 +26,7 @@ import uriSchemeHandler.URISchemeHandler;
 import java.io.File;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -133,8 +134,8 @@ public class TorrentFileHandler {
         }
         byte[] content;
         if (magnetLinkUri != null) {
-            String UriContent = magnetLinkUri.toString();
-            content = UriContent.getBytes();
+            String uriContent = magnetLinkUri.toString();
+            content = uriContent.getBytes(StandardCharsets.UTF_8);
         } else {
             content = result.getContent();
         }

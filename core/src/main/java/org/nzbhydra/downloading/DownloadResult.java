@@ -110,7 +110,7 @@ public class DownloadResult {
             return url;
         }
         String dn = matcher.group(1);
-        url = url.replace("dn=" + dn, "dn=" + URLEncoder.encode(dn)).replace(" ", "%20");
+        url = url.replace("dn=" + dn, "dn=" + URLEncoder.encode(dn, StandardCharsets.UTF_8)).replace(" ", "%20");
         return url;
     }
 
