@@ -1139,7 +1139,7 @@
     function uiTourDirective(TourHelpers) {
         return {
             restrict: 'EA',
-            scope: true,
+            scope: false,
             controller: 'uiTourController',
             link: function (scope, element, attrs, ctrl) {
                 var tour = {
