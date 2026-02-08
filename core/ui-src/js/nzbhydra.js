@@ -336,6 +336,23 @@ angular.module('nzbhydraApp').config(function ($stateProvider, $urlRouterProvide
                 }
             }
         })
+        .state("root.stats.savedSearches", {
+            url: "/saved-searches",
+            views: {
+                'stats@root.stats': {
+                    templateUrl: "static/html/states/saved-searches.html",
+                    controller: SavedSearchesController,
+                    resolve: {
+                        loginRequired: ['$q', '$timeout', '$state', 'HydraAuthService', function ($q, $timeout, $state, HydraAuthService) {
+                            return loginRequired($q, $timeout, $state, HydraAuthService, "stats")
+                        }],
+                        $title: function ($stateParams) {
+                            return "Stats (Saved searches)"
+                        }
+                    }
+                }
+            }
+        })
         .state("root.stats.downloads", {
             url: "/downloads",
             views: {

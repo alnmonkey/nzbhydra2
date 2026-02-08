@@ -9,6 +9,7 @@ import com.google.common.base.Strings;
 import lombok.Data;
 import org.nzbhydra.config.indexer.QueryFormat;
 import org.nzbhydra.config.searching.CustomQueryAndTitleMapping;
+import org.nzbhydra.config.searching.SavedSearch;
 import org.nzbhydra.springnative.ReflectionMarker;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
@@ -70,6 +71,7 @@ public class SearchingConfig {
     private boolean useOriginalCategories = false;
     private boolean wrapApiErrors = false;
     private boolean showMovieQualityIndicator = false;
+    private List<SavedSearch> savedSearches = new ArrayList<>();
 
     public SearchingConfig() {
     }

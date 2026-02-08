@@ -368,6 +368,19 @@ function SearchResultsController($stateParams, $scope, $http, $q, $timeout, $doc
         });
     }
 
+    $scope.saveSearch = function () {
+        var searchRequest = SearchService.getLastExecutedSearchRequestParameters();
+        if (!searchRequest) {
+            growl.info("No search available to save");
+            return;
+        }
+        $http.post("internalapi/savedsearches", {request: searchRequest}).then(function () {
+            growl.success("Saved search");
+        }, function () {
+            growl.error("Unable to save search");
+        });
+    };
+
     //Block the UI and return after timeout. This way we make sure that the blocking is done before angular starts updating the model/view. There's probably a better way to achieve that?
     function startBlocking(message) {
         var deferred = $q.defer();

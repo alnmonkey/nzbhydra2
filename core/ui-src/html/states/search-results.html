@@ -146,6 +146,11 @@
                 <download-nzbzip-button search-results="selected" search-title="searchTitle"
                                         callback="downloadNzbsCallback(result)" ng-if="foo.showResultsAsZipButton && allowZipDownload"></download-nzbzip-button>
                 <copy-links-button search-results="selected" ng-if="!(foo.showResultsAsZipButton && allowZipDownload)"></copy-links-button>
+                <div class="btn-group pe-2 mb-2">
+                    <button type="button" class="btn btn-default" ng-click="saveSearch()" id="save-search">
+                        Save search
+                    </button>
+                </div>
             </div>
         </div>
 

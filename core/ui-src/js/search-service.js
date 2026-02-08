@@ -18,6 +18,7 @@ function SearchService($http) {
         shortcutSearch: shortcutSearch,
         getModalInstance: getModalInstance,
         setModalInstance: setModalInstance,
+        getLastExecutedSearchRequestParameters: getLastExecutedSearchRequestParameters,
     };
 
     function getModalInstance() {
@@ -105,5 +106,9 @@ function SearchService($http) {
 
     function getLastResults() {
         return lastResults;
+    }
+
+    function getLastExecutedSearchRequestParameters() {
+        return lastExecutedSearchRequestParameters;
     }
 }
