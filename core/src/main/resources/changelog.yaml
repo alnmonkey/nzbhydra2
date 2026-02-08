@@ -1,4 +1,9 @@
 #@formatter:off
+-   version: "v8.4.2"
+    final: true
+    changes:
+      -   type: "fix"
+          text: "When creating a ZIP file with results with the same title create unique file names for them instead of overwriting older ones."
 -   version: "v8.4.1"
     date: "2026-02-01"
     final: true
