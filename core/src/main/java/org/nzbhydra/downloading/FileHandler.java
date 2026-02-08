@@ -6,6 +6,7 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
 import okhttp3.ResponseBody;
+import org.apache.commons.io.FilenameUtils;
 import org.jetbrains.annotations.NotNull;
 import org.nzbhydra.config.ConfigProvider;
 import org.nzbhydra.config.SearchSource;
@@ -266,6 +267,12 @@ public class FileHandler {
             try {
                 String title = result.getFileName().replaceAll("[\\\\/:*?\"<>|!]", "_");
                 File tempFile = new File(targetDirectory.toFile(), title);
+                int counter = 1;
+                while (tempFile.exists()) {
+                    String newName = FilenameUtils.getBaseName(title) + "_" + counter + "." + FilenameUtils.getExtension(title);
+                    tempFile = new File(targetDirectory.toFile(), newName);
+                    counter++;
+                }
                 logger.debug("Writing content to temp file {}", tempFile.getAbsolutePath());
                 Files.write(tempFile.toPath(), result.getContent());
                 files.add(tempFile);
