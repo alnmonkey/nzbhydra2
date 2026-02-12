@@ -133,7 +133,9 @@ function SearchController($scope, $http, $stateParams, $state, $uibModal, $timeo
     };
 
     $scope.onTourEnd = function () {
-        hideTourForever();
+        if (!GuidedTourService.isSoftEnd()) {
+            hideTourForever();
+        }
         GuidedTourService.endTour();
     };
 

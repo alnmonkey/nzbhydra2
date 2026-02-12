@@ -24,11 +24,13 @@ function GuidedTourService($http, $timeout, $q, $rootScope, $sce, $state, uiTour
         startTour: startTour,
         endTour: endTour,
         isTourActive: isTourActive,
+        isSoftEnd: isSoftEnd,
         registerResultsSteps: registerResultsSteps,
         registerSearchSteps: registerSearchSteps
     };
 
     var tourActive = false;
+    var softEnd = false;
     var fakeDownloaderInjected = false;
     var tour = null;
     var registeredStepIds = {};
@@ -51,6 +53,7 @@ function GuidedTourService($http, $timeout, $q, $rootScope, $sce, $state, uiTour
         return $http.put('internalapi/demomode').then(function () {
             console.log('[TOUR] Demo mode activated');
             tourActive = true;
+            softEnd = false;
             registeredStepIds = {};
             injectFakeDownloader();
 
@@ -60,6 +63,25 @@ function GuidedTourService($http, $timeout, $q, $rootScope, $sce, $state, uiTour
                 endTour();
                 return;
             }
+
+            // Override tour.end() to ask for confirmation when ending mid-tour
+            var originalEnd = tour.end.bind(tour);
+            tour.end = function () {
+                var currentStep = tour.getCurrentStep ? tour.getCurrentStep() : null;
+                var isLastStep = currentStep && currentStep.stepId === 'wrapUp';
+                if (!isLastStep) {
+                    if (!window.confirm('Are you sure you want to end the tour? You will not be able to start it again.')) {
+                        return $q.resolve();
+                    }
+                }
+                return originalEnd();
+            };
+
+            // "Not now" closes the tour without hiding it forever
+            tour.notNow = function () {
+                softEnd = true;
+                return originalEnd();
+            };
 
             // Add Enter key listener to advance tour
             if (enterKeyListener) {
@@ -82,8 +104,9 @@ function GuidedTourService($http, $timeout, $q, $rootScope, $sce, $state, uiTour
     }
 
     function endTour() {
-        console.log('[TOUR] endTour() called');
+        console.log('[TOUR] endTour() called, softEnd=' + softEnd);
         tourActive = false;
+        softEnd = false;
         // Remove Enter key listener
         if (enterKeyListener) {
             document.removeEventListener('keydown', enterKeyListener);
@@ -101,6 +124,10 @@ function GuidedTourService($http, $timeout, $q, $rootScope, $sce, $state, uiTour
 
     function isTourActive() {
         return tourActive;
+    }
+
+    function isSoftEnd() {
+        return softEnd;
     }
 
 

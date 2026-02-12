@@ -149,7 +149,8 @@
             '            <button type="button" class="btn btn-sm btn-default" ng-if="tourStep.isPrev()" ng-click="tour.prev()">&laquo; Prev</button>\n' +
             '            <button type="button" class="btn btn-sm btn-default" ng-if="tourStep.isNext()" ng-click="tour.next()">Next &raquo;</button>\n' +
             '        </div>\n' +
-            '        <button type="button" class="btn btn-sm btn-default" ng-click="tour.end()">End tour</button>\n' +
+            '        <button type="button" class="btn btn-sm btn-default" ng-if="!tourStep.isPrev()" ng-click="tour.notNow()">Not now</button>\n' +
+            '        <button type="button" class="btn btn-sm btn-default" ng-if="tourStep.isPrev()" ng-click="tour.end()">End tour</button>\n' +
             '    </div>\n' +
             '</div>\n'
         );

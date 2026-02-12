@@ -3,7 +3,7 @@
     final: true
     changes:
       -   type: "feature"
-          text: "Added a guided tour. It highlights the most important search features and how results are presented. You can hide the tour or explicitly disable it in the config. Hydra will persist the tour state per user, i.e. every user can complete or ignore it on their own. This was a pain to implement but hopefully it will help users find features like ID based searching and categories which I always considered obvious."
+          text: "Added a guided tour. It highlights the most important search features and how results are presented. You can hide the tour or explicitly disable it in the config. Hydra will persist the tour state per user, i.e. every user can complete or ignore it on their own. This was a pain to implement but hopefully it will help users find features like ID based searching and categories which I always considered obvious. Feel free to tell me what else should be included in the tour and if it actually helps or is just a nuisance."
       -   type: "feature"
           text: "Allow saving searches from the results view and re-running them from the new Saved searches tab. See #709"
       -   type: "fix"
