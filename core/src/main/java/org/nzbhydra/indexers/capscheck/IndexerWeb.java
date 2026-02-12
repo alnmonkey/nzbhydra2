@@ -6,6 +6,7 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
 import lombok.Data;
+import org.apache.commons.lang3.StringUtils;
 import org.nzbhydra.GenericResponse;
 import org.nzbhydra.config.indexer.CapsCheckRequest;
 import org.nzbhydra.config.indexer.CheckCapsResponse;
@@ -148,8 +149,8 @@ public class IndexerWeb {
         }
 
         // Get names of newly found Prowlarr indexers
-        List<String> foundProwlarrNames = foundProwlarrConfigs.stream()
-                .map(IndexerConfig::getName)
+        List<String> foundProwlarrIds = foundProwlarrConfigs.stream()
+                .map(x -> StringUtils.substringAfterLast(x.getHost(), "/"))
                 .toList();
 
         // Remove existing "(Prowlarr)" indexers that are not in the new list
@@ -157,7 +158,7 @@ public class IndexerWeb {
         int countRemovedIndexers = 0;
         for (IndexerConfig existing : configReadRequest.existingIndexers) {
             if (existing.getName().endsWith("(Prowlarr)")) {
-                if (foundProwlarrNames.contains(existing.getName())) {
+                if (foundProwlarrIds.contains(StringUtils.substringAfterLast(existing.getHost(), "/"))) {
                     // Keep it, will be updated below
                     newConfigs.add(existing);
                 } else {

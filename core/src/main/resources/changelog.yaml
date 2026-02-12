@@ -10,6 +10,8 @@
           text: "When creating a ZIP file with results with the same title create unique file names for them instead of overwriting older ones."
       -   type: "fix"
           text: "Write magnet links with UTF-8 encoding when saving torrents to the black hole folder to avoid garbled non-ASCII titles. See #904"
+      -   type: "fix"
+          text: "Track indexers imported from Prowlarr by their ID. That means that you can rename them in NZBHydra after the import and they will not be added again with their original name."
 -   version: "v8.4.1"
     date: "2026-02-01"
     final: true
