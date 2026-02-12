@@ -380,6 +380,7 @@ searching:
   replaceUmlauts: false
   requiredRegex: null
   requiredWords: []
+  savedSearches: [ ]
   sendTorznabCategories: true
   showQuickFilterButtons: true
   timeout: 20
