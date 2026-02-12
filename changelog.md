@@ -1,3 +1,17 @@
+### v8.5.0 (2026-02-12)
+
+**Feature** Added a guided tour. It highlights the most important search features and how results are presented. You can hide the tour or explicitly disable it in the config. Hydra will persist the tour state per user, i.e. every user can complete or ignore it on their own. This was a pain to implement but hopefully it will help users find features like ID based searching and categories which I always considered obvious. Feel free to tell me what else should be included in the tour and if it actually helps or is just a nuisance.
+
+**Feature** Allow saving searches from the results view and re-running them from the new Saved searches tab. See <a href="https://github.com/theotherp/nzbhydra2/issues/709">#709</a>
+
+**Fix** When creating a ZIP file with results with the same title create unique file names for them instead of overwriting older ones.
+
+**Fix** Write magnet links with UTF-8 encoding when saving torrents to the black hole folder to avoid garbled non-ASCII titles. See <a href="https://github.com/theotherp/nzbhydra2/issues/904">#904</a>
+
+**Fix** Track indexers imported from Prowlarr by their ID. That means that you can rename them in NZBHydra after the import and they will not be added again with their original name.
+
+
+
 ### v8.4.1 (2026-02-01)
 
 **Fix** Fix several path traversal vulnerabilities.
