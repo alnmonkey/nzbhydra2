@@ -35,3 +35,4 @@ other/wrapper/pyInstaller/windows_console/build
 
 **/.DS_Store
 core/ui-src/hydra-ng
+nul
