@@ -1,5 +1,6 @@
 package org.nzbhydra.news;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -37,9 +38,17 @@ public class UserNewsProviderTest {
     @InjectMocks
     private UserNewsProvider testee = new UserNewsProvider();
 
+    private String originalDataFolder;
+
     @BeforeEach
     public void setUp() {
+        originalDataFolder = NzbHydra.getDataFolder();
         NzbHydra.setDataFolder(tempDir.toString());
+    }
+
+    @AfterEach
+    public void tearDown() {
+        NzbHydra.setDataFolder(originalDataFolder);
     }
 
     @Test
