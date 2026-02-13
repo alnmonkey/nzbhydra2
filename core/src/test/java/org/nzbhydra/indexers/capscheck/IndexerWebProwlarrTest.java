@@ -51,7 +51,7 @@ public class IndexerWebProwlarrTest {
         List<IndexerConfig> existingIndexers = new ArrayList<>();
         IndexerConfig prowlarrConfig = createProwlarrConfig();
 
-        IndexerConfig newIndexer = createIndexerConfig("NZBgeek (Prowlarr)", SearchModuleType.NEWZNAB, "http://prowlarr:9696/1");
+        IndexerConfig newIndexer = createIndexerConfig("NZBgeek (Prowlarr)", SearchModuleType.NEWZNAB, "http://127.0.0.1:9696/1");
         when(prowlarrConfigRetriever.retrieveIndexers(any())).thenReturn(Arrays.asList(newIndexer));
 
         ResponseEntity<?> response = testee.readProwlarrConfig(createRequest(existingIndexers, prowlarrConfig));
@@ -65,12 +65,14 @@ public class IndexerWebProwlarrTest {
     }
 
     @Test
-    void shouldUpdateExistingProwlarrIndexers() throws Exception {
-        IndexerConfig existingProwlarrIndexer = createIndexerConfig("NZBgeek (Prowlarr)", SearchModuleType.NEWZNAB, "http://old-prowlarr:9696/1");
+    void shouldUpdateExistingProwlarrIndexerById() throws Exception {
+        IndexerConfig existingProwlarrIndexer = createIndexerConfig("NZBgeek (Prowlarr)", SearchModuleType.NEWZNAB, "http://127.0.0.1:9696/1");
+        existingProwlarrIndexer.setApiKey("oldapikey");
         List<IndexerConfig> existingIndexers = new ArrayList<>(Arrays.asList(existingProwlarrIndexer));
         IndexerConfig prowlarrConfig = createProwlarrConfig();
 
-        IndexerConfig updatedIndexer = createIndexerConfig("NZBgeek (Prowlarr)", SearchModuleType.NEWZNAB, "http://new-prowlarr:9696/1");
+        IndexerConfig updatedIndexer = createIndexerConfig("NZBgeek (Prowlarr)", SearchModuleType.NEWZNAB, "http://127.0.0.1:9696/1");
+        updatedIndexer.setApiKey("newapikey");
         when(prowlarrConfigRetriever.retrieveIndexers(any())).thenReturn(Arrays.asList(updatedIndexer));
 
         ResponseEntity<?> response = testee.readProwlarrConfig(createRequest(existingIndexers, prowlarrConfig));
@@ -83,13 +85,36 @@ public class IndexerWebProwlarrTest {
     }
 
     @Test
+    void shouldUpdateRenamedProwlarrIndexerById() throws Exception {
+        // Indexer was imported from Prowlarr but user renamed it (no longer ends with "(Prowlarr)")
+        IndexerConfig renamedProwlarrIndexer = createIndexerConfig("My Custom Name", SearchModuleType.NEWZNAB, "http://127.0.0.1:9696/1");
+        List<IndexerConfig> existingIndexers = new ArrayList<>(Arrays.asList(renamedProwlarrIndexer));
+        IndexerConfig prowlarrConfig = createProwlarrConfig();
+
+        IndexerConfig updatedIndexer = createIndexerConfig("NZBgeek (Prowlarr)", SearchModuleType.NEWZNAB, "http://127.0.0.1:9696/1");
+        when(prowlarrConfigRetriever.retrieveIndexers(any())).thenReturn(Arrays.asList(updatedIndexer));
+
+        ResponseEntity<?> response = testee.readProwlarrConfig(createRequest(existingIndexers, prowlarrConfig));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        Map<String, Object> body = objectMapper.convertValue(response.getBody(), Map.class);
+        assertThat((Integer) body.get("addedIndexers")).isEqualTo(0);
+        assertThat((Integer) body.get("updatedIndexers")).isEqualTo(1);
+        assertThat((Integer) body.get("removedIndexers")).isEqualTo(0);
+        // User's custom name should be preserved
+        List<Map<String, Object>> newConfigs = (List<Map<String, Object>>) body.get("newIndexersConfig");
+        assertThat(newConfigs).hasSize(1);
+        assertThat(newConfigs.get(0).get("name")).isEqualTo("My Custom Name");
+    }
+
+    @Test
     void shouldRemoveProwlarrIndexersNotInNewConfig() throws Exception {
-        IndexerConfig existingProwlarrIndexer = createIndexerConfig("OldIndexer (Prowlarr)", SearchModuleType.NEWZNAB, "http://prowlarr:9696/1");
+        IndexerConfig existingProwlarrIndexer = createIndexerConfig("OldIndexer (Prowlarr)", SearchModuleType.NEWZNAB, "http://127.0.0.1:9696/1");
         IndexerConfig existingNonProwlarrIndexer = createIndexerConfig("RegularIndexer", SearchModuleType.NEWZNAB, "http://indexer.com");
         List<IndexerConfig> existingIndexers = new ArrayList<>(Arrays.asList(existingProwlarrIndexer, existingNonProwlarrIndexer));
         IndexerConfig prowlarrConfig = createProwlarrConfig();
 
-        IndexerConfig newIndexer = createIndexerConfig("NewIndexer (Prowlarr)", SearchModuleType.NEWZNAB, "http://prowlarr:9696/2");
+        IndexerConfig newIndexer = createIndexerConfig("NewIndexer (Prowlarr)", SearchModuleType.NEWZNAB, "http://127.0.0.1:9696/2");
         when(prowlarrConfigRetriever.retrieveIndexers(any())).thenReturn(Arrays.asList(newIndexer));
 
         ResponseEntity<?> response = testee.readProwlarrConfig(createRequest(existingIndexers, prowlarrConfig));
@@ -102,6 +127,24 @@ public class IndexerWebProwlarrTest {
         assertThat(newConfigs).hasSize(2);
         assertThat(newConfigs.stream().map(c -> c.get("name")).toList())
                 .containsExactlyInAnyOrder("RegularIndexer", "NewIndexer (Prowlarr)");
+    }
+
+    @Test
+    void shouldRemoveRenamedProwlarrIndexerNoLongerInProwlarr() throws Exception {
+        // Indexer was imported from Prowlarr but renamed, and is no longer in Prowlarr
+        IndexerConfig renamedProwlarrIndexer = createIndexerConfig("My Custom Name", SearchModuleType.NEWZNAB, "http://127.0.0.1:9696/1");
+        List<IndexerConfig> existingIndexers = new ArrayList<>(Arrays.asList(renamedProwlarrIndexer));
+        IndexerConfig prowlarrConfig = createProwlarrConfig();
+
+        when(prowlarrConfigRetriever.retrieveIndexers(any())).thenReturn(new ArrayList<>());
+
+        ResponseEntity<?> response = testee.readProwlarrConfig(createRequest(existingIndexers, prowlarrConfig));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        Map<String, Object> body = objectMapper.convertValue(response.getBody(), Map.class);
+        assertThat((Integer) body.get("removedIndexers")).isEqualTo(1);
+        List<?> newConfigs = (List<?>) body.get("newIndexersConfig");
+        assertThat(newConfigs).isEmpty();
     }
 
     @Test

@@ -6,7 +6,6 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
 import lombok.Data;
-import org.apache.commons.lang3.StringUtils;
 import org.nzbhydra.GenericResponse;
 import org.nzbhydra.config.indexer.CapsCheckRequest;
 import org.nzbhydra.config.indexer.CheckCapsResponse;
@@ -148,17 +147,24 @@ public class IndexerWeb {
             return ResponseEntity.badRequest().body(errorResponse);
         }
 
-        // Get names of newly found Prowlarr indexers
+        String prowlarrHost = configReadRequest.prowlarrConfig.getHost();
+        if (prowlarrHost.endsWith("/")) {
+            prowlarrHost = prowlarrHost.substring(0, prowlarrHost.length() - 1);
+        }
+
+        // Get IDs of newly found Prowlarr indexers
         List<String> foundProwlarrIds = foundProwlarrConfigs.stream()
-                .map(x -> StringUtils.substringAfterLast(x.getHost(), "/"))
+                .map(x -> ProwlarrConfigRetriever.extractProwlarrId(x.getHost()))
                 .toList();
 
-        // Remove existing "(Prowlarr)" indexers that are not in the new list
+        // Remove existing Prowlarr indexers (identified by host containing the Prowlarr host)
+        // that are no longer in the new list
         List<IndexerConfig> newConfigs = new ArrayList<>();
         int countRemovedIndexers = 0;
         for (IndexerConfig existing : configReadRequest.existingIndexers) {
-            if (existing.getName().endsWith("(Prowlarr)")) {
-                if (foundProwlarrIds.contains(StringUtils.substringAfterLast(existing.getHost(), "/"))) {
+            if (existing.getHost().contains(prowlarrHost)) {
+                String existingId = ProwlarrConfigRetriever.extractProwlarrId(existing.getHost());
+                if (foundProwlarrIds.contains(existingId)) {
                     // Keep it, will be updated below
                     newConfigs.add(existing);
                 } else {
@@ -174,10 +180,11 @@ public class IndexerWeb {
         int countUpdatedIndexers = 0;
         int countAddedIndexers = 0;
 
-        // Update existing configs, add new ones
+        // Update existing configs or add new ones, matching by Prowlarr indexer ID
         for (IndexerConfig foundProwlarrConfig : foundProwlarrConfigs) {
+            String foundId = ProwlarrConfigRetriever.extractProwlarrId(foundProwlarrConfig.getHost());
             final Optional<IndexerConfig> existingIndexer = newConfigs.stream()
-                    .filter(x -> x.getName().equals(foundProwlarrConfig.getName()))
+                    .filter(x -> foundId.equals(ProwlarrConfigRetriever.extractProwlarrId(x.getHost())))
                     .findFirst();
             if (existingIndexer.isPresent()) {
                 existingIndexer.get().setHost(foundProwlarrConfig.getHost());

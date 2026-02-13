@@ -5,6 +5,7 @@ package org.nzbhydra.indexers.capscheck;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.core.type.TypeReference;
 import lombok.Data;
+import org.apache.commons.lang3.StringUtils;
 import org.nzbhydra.Jackson;
 import org.nzbhydra.config.indexer.IndexerConfig;
 import org.nzbhydra.config.indexer.SearchModuleType;
@@ -82,6 +83,13 @@ public class ProwlarrConfigRetriever {
         }
 
         return configs;
+    }
+
+    /**
+     * Extracts the Prowlarr indexer ID from a host URL like "http://prowlarr:9696/42".
+     */
+    public static String extractProwlarrId(String host) {
+        return StringUtils.substringAfterLast(host, "/");
     }
 
     @Data
