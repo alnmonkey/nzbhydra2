@@ -3,11 +3,11 @@
 Build and release script for NZBHydra2.
 
 Usage:
-    python build_and_release.py --version 8.3.0 --next-version 8.3.1
-    python build_and_release.py --version 8.3.0 --next-version 8.3.1 --dry-run local
-    python build_and_release.py --version 8.3.0 --next-version 8.3.1 --dry-run print
+    python build_and_release.py --version 8.3.0
+    python build_and_release.py --version 8.3.0 --dry-run local
+    python build_and_release.py --version 8.3.0 --next-version 8.3.1  # override auto-increment
     python build_and_release.py --resume
-    python build_and_release.py --start-from build_releases --version 8.3.0 --next-version 8.3.1
+    python build_and_release.py --start-from build_releases --version 8.3.0
     python build_and_release.py --list-steps
     python build_and_release.py --reset-changes
 """
@@ -186,6 +186,15 @@ def _create_log_file_path() -> Path:
     log_dir = PROJECT_ROOT / "misc" / "build-logs"
     log_dir.mkdir(exist_ok=True)
     return log_dir / f"build-release-{timestamp}.log"
+
+
+def _increment_patch_version(version: str) -> str:
+    """Increment the patch level of a version string (e.g., '8.3.0' -> '8.3.1')."""
+    parts = version.split(".")
+    if len(parts) != 3 or not all(p.isdigit() for p in parts):
+        raise ValueError(f"Cannot auto-increment version '{version}': expected format X.Y.Z")
+    parts[2] = str(int(parts[2]) + 1)
+    return ".".join(parts)
 
 
 # ---------------------------------------------------------------------------
@@ -1277,8 +1286,8 @@ def main(
         raise SystemExit(1)
 
     if not next_version:
-        console.print("[red]Error: --next-version is required (or use --resume)[/red]")
-        raise SystemExit(1)
+        next_version = _increment_patch_version(version)
+        console.print(f"[dim]Next version auto-selected: {next_version}[/dim]")
 
     if version == next_version:
         console.print(f"[red]Error: next version ({next_version}) must be different from current version ({version})[/red]")
