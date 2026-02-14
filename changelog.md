@@ -1,3 +1,11 @@
+### v8.5.1 (2026-02-15)
+
+**Fix** Stupid bug in prowlarr indexer tracking.
+
+**Fix** Show downloaded indicator for results when downloaded and not for the next time they're displayed.
+
+
+
 ### v8.5.0 (2026-02-12)
 
 **Feature** Added a guided tour. It highlights the most important search features and how results are presented. You can hide the tour or explicitly disable it in the config. Hydra will persist the tour state per user, i.e. every user can complete or ignore it on their own. This was a pain to implement but hopefully it will help users find features like ID based searching and categories which I always considered obvious. Feel free to tell me what else should be included in the tour and if it actually helps or is just a nuisance.
