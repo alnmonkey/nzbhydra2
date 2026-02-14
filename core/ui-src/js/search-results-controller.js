@@ -992,12 +992,14 @@ function SearchResultsController($stateParams, $scope, $http, $q, $timeout, $doc
 
     $scope.downloadNzbsCallback = function (addedIds) {
         if (addedIds !== null && addedIds.length > 0) {
+            var downloadedAt = moment().format("YYYY-MM-DD HH:mm");
             growl.info("Removing downloaded results from selection");
             var toRemove = _.filter($scope.selected, function (x) {
                 return addedIds.indexOf(Number(x.searchResultId)) > -1;
             });
             var newSelected = $scope.selected;
             _.forEach(toRemove, function (x) {
+                x.downloadedAt = downloadedAt;
                 $scope.$broadcast("toggleSelection", x, false);
                 newSelected.splice($scope.selected.indexOf(x), 1);
             });

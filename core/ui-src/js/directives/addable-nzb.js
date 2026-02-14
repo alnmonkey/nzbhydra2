@@ -41,6 +41,7 @@ function addableNzb(DebugService) {
                 if (response !== "dismissed") {
                     if (response.data.successful && (response.data.addedIds != null && response.data.addedIds.indexOf(Number($scope.searchresult.searchResultId)) > -1)) {
                         $scope.cssClass = getCssClass($scope.downloader.downloaderType) + "-success";
+                        $scope.searchresult.downloadedAt = moment().format("YYYY-MM-DD HH:mm");
                     } else {
                         $scope.cssClass = getCssClass($scope.downloader.downloaderType) + "-error";
                         growl.error(response.data.message);

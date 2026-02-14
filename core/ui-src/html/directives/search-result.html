@@ -28,8 +28,8 @@
       <span class="title">{{result.alwaysShowTitles}}<span
         ng-if="(result.titleGroupIndex === 0 && result.duplicateGroupIndex === 0) || searchResultsControllerShared.isGroupEpisodes || foo.alwaysShowTitles"><img
         ng-if="result.cover && foo.showCovers" ng-src="{{::result.cover}}" width="{{::coverSize}}px" style="margin-right: 5px" ng-click="showCover(result.cover)"/><span
-        ng-if="result.downloadedAt && searchResultsControllerShared.showDownloadedIndicator" class="fa fa-check" uib-tooltip="Already downloaded at {{::result.downloadedAt}}"
-        tooltip-placement="top" tooltip-trigger="mouseenter"></span><span
+        ng-if="result.downloadedAt && searchResultsControllerShared.showDownloadedIndicator" class="fa fa-check" uib-tooltip="Already downloaded at {{result.downloadedAt}}"
+        tooltip-placement="top" tooltip-trigger="mouseenter" style="margin-right: 5px"></span><span
         ng-if="::result.qualityRating"
         class="quality-badge quality-{{::getQualityClass(result.qualityRating)}}"
         uib-tooltip-html="::formatQualityWarnings(result.qualityWarnings)"
@@ -110,6 +110,7 @@
         </span>
         <span ng-switch-when="TORRENT">
             <a target="_blank" href="gettorrent/user/{{ ::result.searchResultId }}"
+               ng-click="markDownloaded()"
                style="vertical-align: middle; margin-left: 3px; margin-right: 3px"
                class="no-underline result-torrent-download-link"
                uib-tooltip="Download torrent"
@@ -118,9 +119,10 @@
             </a>
           <addable-nzbs searchresult="::result"></addable-nzbs>
         </span>
-        <save-or-send-file ng-if="result.downloadType!='TORBOX'" search-result-id="result.searchResultId" type="result.downloadType"></save-or-send-file>
+        <save-or-send-file ng-if="result.downloadType!='TORBOX'" search-result-id="result.searchResultId" searchresult="result" type="result.downloadType"></save-or-send-file>
           <span ng-switch-default>
               <a target="_blank" href="getnzb/user/{{ ::result.searchResultId }}"
+                 ng-click="markDownloaded()"
                  style="vertical-align: middle; margin-left: 3px; margin-right: 3px"
                  class="no-underline result-nzb-download-link"
                  uib-tooltip="Download NZB"

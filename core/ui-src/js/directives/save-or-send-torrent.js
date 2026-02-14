@@ -7,6 +7,7 @@ function saveOrSendFile() {
         templateUrl: 'static/html/directives/save-or-send-file.html',
         scope: {
             searchResultId: "<",
+            searchresult: "<",
             isFile: "<",
             type: "<"
         },
@@ -31,6 +32,9 @@ function saveOrSendFile() {
             $http.put(endpoint, toSend).then(function (response) {
                 if (response.data.successful) {
                     $scope.cssClass = "glyphicon-ok";
+                    if ($scope.searchresult) {
+                        $scope.searchresult.downloadedAt = moment().format("YYYY-MM-DD HH:mm");
+                    }
                 } else {
                     $scope.cssClass = "glyphicon-remove";
                     growl.error(response.data.message);

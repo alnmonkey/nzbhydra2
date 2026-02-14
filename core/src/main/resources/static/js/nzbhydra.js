@@ -1287,6 +1287,10 @@ function searchResult() {
         handleNfoDisplay($scope, $http, growl, $uibModal, HydraAuthService);
         handleNzbDownload($scope, $window);
 
+        $scope.markDownloaded = function () {
+            $scope.result.downloadedAt = moment().format("YYYY-MM-DD HH:mm");
+        };
+
         $scope.kify = function () {
             return function (number) {
                 if (number > 1000) {
@@ -1406,6 +1410,7 @@ function saveOrSendFile() {
         templateUrl: 'static/html/directives/save-or-send-file.html',
         scope: {
             searchResultId: "<",
+            searchresult: "<",
             isFile: "<",
             type: "<"
         },
@@ -1430,6 +1435,9 @@ function saveOrSendFile() {
             $http.put(endpoint, toSend).then(function (response) {
                 if (response.data.successful) {
                     $scope.cssClass = "glyphicon-ok";
+                    if ($scope.searchresult) {
+                        $scope.searchresult.downloadedAt = moment().format("YYYY-MM-DD HH:mm");
+                    }
                 } else {
                     $scope.cssClass = "glyphicon-remove";
                     growl.error(response.data.message);
@@ -3814,6 +3822,7 @@ function addableNzb(DebugService) {
                 if (response !== "dismissed") {
                     if (response.data.successful && (response.data.addedIds != null && response.data.addedIds.indexOf(Number($scope.searchresult.searchResultId)) > -1)) {
                         $scope.cssClass = getCssClass($scope.downloader.downloaderType) + "-success";
+                        $scope.searchresult.downloadedAt = moment().format("YYYY-MM-DD HH:mm");
                     } else {
                         $scope.cssClass = getCssClass($scope.downloader.downloaderType) + "-error";
                         growl.error(response.data.message);
@@ -12015,12 +12024,14 @@ function SearchResultsController($stateParams, $scope, $http, $q, $timeout, $doc
 
     $scope.downloadNzbsCallback = function (addedIds) {
         if (addedIds !== null && addedIds.length > 0) {
+            var downloadedAt = moment().format("YYYY-MM-DD HH:mm");
             growl.info("Removing downloaded results from selection");
             var toRemove = _.filter($scope.selected, function (x) {
                 return addedIds.indexOf(Number(x.searchResultId)) > -1;
             });
             var newSelected = $scope.selected;
             _.forEach(toRemove, function (x) {
+                x.downloadedAt = downloadedAt;
                 $scope.$broadcast("toggleSelection", x, false);
                 newSelected.splice($scope.selected.indexOf(x), 1);
             });

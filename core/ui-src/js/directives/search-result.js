@@ -210,6 +210,10 @@ function searchResult() {
         handleNfoDisplay($scope, $http, growl, $uibModal, HydraAuthService);
         handleNzbDownload($scope, $window);
 
+        $scope.markDownloaded = function () {
+            $scope.result.downloadedAt = moment().format("YYYY-MM-DD HH:mm");
+        };
+
         $scope.kify = function () {
             return function (number) {
                 if (number > 1000) {

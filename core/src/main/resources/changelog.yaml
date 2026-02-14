@@ -5,6 +5,8 @@
     changes:
       -   type: "fix"
           text: "Stupid bug in prowlarr indexer tracking."
+      -   type: "fix"
+          text: "Show downloaded indicator for results when downloaded and not for the next time they're displayed."
 -   version: "v8.5.0"
     date: "2026-02-12"
     final: true
