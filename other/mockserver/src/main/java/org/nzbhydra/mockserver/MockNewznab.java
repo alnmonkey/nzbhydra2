@@ -302,7 +302,7 @@ public class MockNewznab {
             rssRoot.getRssChannel().getNewznabResponse().setTotal(API_MAX);
             rssRoot.getRssChannel().getItems().forEach(x -> {
                 x.getNewznabAttributes().clear();
-                x.getNewznabAttributes().add(new NewznabAttribute("coverurl", "https://i.omgwtfnzbs.org/tvdb/697fdaeb0fb1ac87d4d6af684b20593a/697fdaeb0fb1ac87d4d6af684b20593a.jpg"));
+                x.getNewznabAttributes().add(new NewznabAttribute("coverurl", "https://artworks.thetvdb.com/banners/v4/movie/358180/posters/698143e3d4a3f.jpg"));
                 x.setCategory("Movies");
                 x.getNewznabAttributes().add(new NewznabAttribute("category", "2050"));
             });

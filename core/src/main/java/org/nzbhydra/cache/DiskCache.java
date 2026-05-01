@@ -14,6 +14,7 @@ import java.io.File;
 import java.nio.file.Files;
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -35,9 +36,14 @@ public class DiskCache extends AbstractValueAdaptingCache {
         super(false);
         this.cacheDir = cacheDir;
         this.name = name;
-        boolean created = cacheDir.mkdirs();
-        if (!cacheDir.exists()) {
+        if (!cacheDir.mkdirs() && !cacheDir.exists()) {
             throw new RuntimeException("Error creating cache dir " + cacheDir.getAbsolutePath());
+        }
+        File[] existingFiles = cacheDir.listFiles();
+        if (existingFiles != null) {
+            for (File file : existingFiles) {
+                ACCESS_MAP.putIfAbsent(file.getName(), Instant.ofEpochMilli(file.lastModified()));
+            }
         }
     }
 
@@ -55,7 +61,8 @@ public class DiskCache extends AbstractValueAdaptingCache {
     @SneakyThrows
     public <T> T get(Object key, Callable<T> valueLoader) {
         if (key instanceof String keyString) {
-            ACCESS_MAP.put(keyString, Instant.now());
+            String cacheKey = sanitizeKey(keyString);
+            ACCESS_MAP.put(cacheKey, Instant.now());
             File keyFile = buildKeyFile(keyString);
             if (keyFile.exists()) {
                 return (T) Files.readAllBytes(keyFile.toPath());
@@ -79,7 +86,7 @@ public class DiskCache extends AbstractValueAdaptingCache {
         if ((key instanceof String keyString) && (value instanceof byte[] valueBytes)) {
             logger.debug(LoggingMarkers.DISK_CACHE, "Writing entry with key {} and size {}", keyString, valueBytes.length);
             Files.write(buildKeyFile(keyString).toPath(), valueBytes);
-            ACCESS_MAP.put(keyString, Instant.now());
+            ACCESS_MAP.put(sanitizeKey(keyString), Instant.now());
         } else {
             throw new RuntimeException("Illegal type for key " + key.getClass() + " and/or value " + value.getClass());
         }
@@ -91,10 +98,18 @@ public class DiskCache extends AbstractValueAdaptingCache {
             logger.debug(LoggingMarkers.CONFIG_READ_WRITE, "{} entries in cache - exceeds limit of {}", ACCESS_MAP.size(), MAX_ENTRIES);
             deleteOldestEntry();
         }
-        while (Arrays.stream(cacheDir.listFiles()).mapToDouble(File::length).sum() / (1024 * 1024) > MAX_ENTRIES_SIZE_MB) {
+        while (getCacheSizeInMb() > MAX_ENTRIES_SIZE_MB) {
             logger.debug(LoggingMarkers.CONFIG_READ_WRITE, "Cache takes up too much space (more than {})", MAX_ENTRIES_SIZE_MB);
             deleteOldestEntry();
         }
+    }
+
+    private double getCacheSizeInMb() {
+        File[] files = cacheDir.listFiles();
+        if (files == null) {
+            return 0;
+        }
+        return Arrays.stream(files).mapToDouble(File::length).sum() / (1024 * 1024);
     }
 
     private void deleteOldestEntry() {
@@ -102,15 +117,22 @@ public class DiskCache extends AbstractValueAdaptingCache {
         if (oldestEntry.isPresent()) {
             logger.debug(LoggingMarkers.DISK_CACHE, "Removing oldest entry {}", oldestEntry.get());
             ACCESS_MAP.remove(oldestEntry.get().getKey());
-            FileUtils.deleteQuietly(buildKeyFile(oldestEntry.get().getKey()));
+            FileUtils.deleteQuietly(new File(cacheDir, oldestEntry.get().getKey()));
+        } else {
+            File[] files = cacheDir.listFiles();
+            if (files != null) {
+                Arrays.stream(files).min(Comparator.comparingLong(File::lastModified)).ifPresent(FileUtils::deleteQuietly);
+            }
         }
+    }
+
+    private String sanitizeKey(String keyString) {
+        return keyString.replaceAll("[/\\\\:*?\"<>|.]", "_");
     }
 
     @NotNull
     private File buildKeyFile(String keyString) {
-        // Sanitize key to prevent path traversal - replace unsafe characters
-        String sanitizedKey = keyString.replaceAll("[/\\\\:*?\"<>|.]", "_");
-        return new File(cacheDir, sanitizedKey);
+        return new File(cacheDir, sanitizeKey(keyString));
     }
 
     @Override
@@ -119,7 +141,7 @@ public class DiskCache extends AbstractValueAdaptingCache {
             File keyFile = buildKeyFile(keyString);
             if (keyFile.exists()) {
                 logger.debug(LoggingMarkers.CONFIG_READ_WRITE, "Evicting entry {}", keyString);
-                ACCESS_MAP.remove(keyString);
+                ACCESS_MAP.remove(sanitizeKey(keyString));
                 FileUtils.deleteQuietly(keyFile);
             } else {
                 logger.debug(LoggingMarkers.CONFIG_READ_WRITE, "Can't evict not existing entry {}", keyString);

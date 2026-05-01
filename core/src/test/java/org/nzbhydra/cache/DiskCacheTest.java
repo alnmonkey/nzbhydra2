@@ -7,16 +7,17 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
+import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.time.Instant;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@Disabled
 class DiskCacheTest {
 
     File file;
@@ -24,6 +25,7 @@ class DiskCacheTest {
     @BeforeEach
     @SneakyThrows
     public void setUp() {
+        clearAccessMap();
         file = Files.createTempDirectory("test").toFile();
     }
 
@@ -33,6 +35,7 @@ class DiskCacheTest {
         if (file != null) {
             FileUtils.deleteQuietly(file);
         }
+        clearAccessMap();
     }
 
     @Test
@@ -85,5 +88,65 @@ class DiskCacheTest {
         assertThat(diskCache.get("key2"))
                 .as("Should've kept second oldest entry")
                 .isNotNull();
+    }
+
+    @Test
+    @SneakyThrows
+    void shouldPrepopulateAccessMapFromExistingFilesUsingCanonicalKeys() {
+        DiskCache diskCache = new DiskCache(file, "name");
+        byte[] value = "hello".getBytes(StandardCharsets.UTF_8);
+        diskCache.put("show.name.jpg", value);
+
+        clearAccessMap();
+        DiskCache restartedCache = new DiskCache(file, "name");
+        for (int i = 1; i <= 500; i++) {
+            restartedCache.put("key" + i, value);
+        }
+
+        assertThat(restartedCache.lookup("show.name.jpg"))
+                .as("Restarted cache should evict the oldest pre-existing file")
+                .isNull();
+        assertThat(restartedCache.lookup("key1"))
+                .as("Newer entries should remain in the cache")
+                .isNotNull();
+    }
+
+    @Test
+    @SneakyThrows
+    void shouldDeleteOldestDiskFileWhenCacheIsOversizedAndAccessMapIsEmpty() {
+        writeFile("old-file", 20_000_000, Instant.now().minusSeconds(3));
+        writeFile("middle-file", 20_000_000, Instant.now().minusSeconds(2));
+        writeFile("new-file", 20_000_000, Instant.now().minusSeconds(1));
+
+        DiskCache diskCache = new DiskCache(file, "name");
+        clearAccessMap();
+
+        diskCache.put("fresh-key", "small".getBytes(StandardCharsets.UTF_8));
+
+        assertThat(new File(file, "old-file"))
+                .as("Fallback cleanup should remove the oldest file on disk")
+                .doesNotExist();
+        assertThat(new File(file, "middle-file")).exists();
+        assertThat(new File(file, "new-file")).exists();
+    }
+
+    @SneakyThrows
+    private void clearAccessMap() {
+        getAccessMap().clear();
+    }
+
+    @SuppressWarnings("unchecked")
+    @SneakyThrows
+    private Map<String, Instant> getAccessMap() {
+        Field field = DiskCache.class.getDeclaredField("ACCESS_MAP");
+        field.setAccessible(true);
+        return (Map<String, Instant>) field.get(null);
+    }
+
+    @SneakyThrows
+    private void writeFile(String name, int size, Instant lastModified) {
+        File target = new File(file, name);
+        Files.write(target.toPath(), new byte[size]);
+        assertThat(target.setLastModified(lastModified.toEpochMilli())).isTrue();
     }
 }
