@@ -1,3 +1,9 @@
+### v8.8.1 (2026-05-02)
+
+**Fix** Fix bug in image cache causing high CPU usage
+
+
+
 ### v8.8.0 (2026-04-24)
 
 **Feature** Again I've made the mistake of thinking that my workflow is the norm. I never change the indexers for a search (and still don't really see a reason to do so) but I understand that some of you do this often enough that one extra click compared to before was enough to generate the most feedback I've ever had on a change (for better or worse). I've added an option to switch back to the old indexer selection type with checkboxes.<br>
