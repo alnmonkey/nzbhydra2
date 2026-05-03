@@ -125,7 +125,7 @@ public class IndexerWebAccess {
             }
         } catch (UnmarshallingFailureException e) {
             if (!response.toLowerCase().contains("function not available")) {
-                //Some indexers like Animetosho don't return a proper error code. This error may happen during caps check and we don't want to log it
+                //Some indexers don't return a proper error code. This error may happen during caps check and we don't want to log it
                 logParseException(response, e);
             }
             throw new HydraUnmarshallingFailureException(e.getMessage(), e, response);

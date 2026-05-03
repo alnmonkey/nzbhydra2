@@ -181,7 +181,7 @@ public class IndexerConfig {
     public static boolean isIndexerEquals(IndexerConfig a, IndexerConfig b) {
         return java.util.Objects.equals(b.getHost(), a.getHost())
             && java.util.Objects.equals(b.getApiKey(), a.getApiKey())
-            && java.util.Objects.equals(a.getSearchModuleType(), b.getSearchModuleType()) //Animetosho (and others) may support newznab and torznab and may be added once for each type
+               && java.util.Objects.equals(a.getSearchModuleType(), b.getSearchModuleType()) //Some may support newznab and torznab and may be added once for each type
             ;
     }
 }

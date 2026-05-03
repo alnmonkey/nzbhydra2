@@ -158,7 +158,7 @@ function getIndexerBoxFields(indexerModel, parentModel, isInitial, CategoriesSer
         );
     }
 
-    if (['WTFNZB', 'NEWZNAB', 'TORZNAB', 'IMPORT_CONFIG', 'NZBINDEX_API', 'TORBOX'].includes(indexerModel.searchModuleType) && indexerModel.host !== 'https://feed.animetosho.org') {
+    if (['WTFNZB', 'NEWZNAB', 'TORZNAB', 'IMPORT_CONFIG', 'NZBINDEX_API', 'TORBOX'].includes(indexerModel.searchModuleType)) {
         fieldset.push(
             {
                 key: 'apiKey',
@@ -874,27 +874,12 @@ angular.module('nzbhydraApp').controller('IndexerConfigSelectionBoxInstanceContr
             host: "https://api.althub.co.za"
         },
         {
-            name: "Animetosho (Newznab)",
-            host: "https://feed.animetosho.org",
-            categories: ["Anime"],
-            supportedSearchIds: [],
-            supportedSearchTypes: ["SEARCH"],
-            allCapsChecked: true,
-            configComplete: true,
-            categoryMapping: {
-                anime: 5070,
-                audiobook: null,
-                comic: null,
-                ebook: null,
-                magazine: null,
-                categories: [
-                    {
-                        id: 5070,
-                        name: "Anime",
-                        subCategories: []
-                    }
-                ]
-            }
+            name: "ameNZB",
+            host: "https://amenzb.moe"
+        },
+        {
+            name: "BlurayNZB",
+            host: "https://www.bluraynzb.org"
         },
         {
             name: "Digital Carnage",
@@ -1125,18 +1110,6 @@ angular.module('nzbhydraApp').controller('IndexerConfigSelectionBoxInstanceContr
             host: "http://127.0.0.1:9117/api/v2.0/indexers/YOURTRACKER/results/torznab/",
             supportedSearchIds: undefined,
             supportedSearchTypes: undefined,
-            searchModuleType: "TORZNAB",
-            state: "ENABLED",
-            enabledForSearchSource: "BOTH"
-        },
-        {
-            categories: ["Anime"],
-            allCapsChecked: true,
-            configComplete: true,
-            name: "Animetosho (Torznab)",
-            host: "https://feed.animetosho.org",
-            supportedSearchIds: [],
-            supportedSearchTypes: ["SEARCH"],
             searchModuleType: "TORZNAB",
             state: "ENABLED",
             enabledForSearchSource: "BOTH"

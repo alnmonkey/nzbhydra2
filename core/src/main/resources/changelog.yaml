@@ -1,4 +1,9 @@
 #@formatter:off
+-   version: "v8.0.0"
+    final: true
+    changes:
+      -   type: "feature"
+          text: "Removed animetosho and added ameNZB and BlurayNZB. See #1059"
 -   version: "v8.8.1"
     date: "2026-05-02"
     final: true
